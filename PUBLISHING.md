@@ -53,27 +53,10 @@ The manifest.json file is **automatically updated** as part of the release workf
 1. Build the plugin
 2. Create the release with the zip file
 3. Calculate the MD5 checksum
-4. Update manifest.json with the new version, checksum, and timestamp
+4. **Prepend** the new version to the `versions` array in manifest.json (with changelog from `release-notes/RELEASE_NOTES_vX.Y.Z.md`), keeping all previous versions
 5. Commit and push the changes
 
-**No manual action required!** Everything happens in one automated workflow.
-
-## Adding New Versions
-
-When releasing a new version, add it to the `versions` array in `manifest.json`:
-
-```json
-{
-  "version": "1.1.0.0",
-  "changelog": "Description of changes",
-  "targetAbi": "10.10.0.0",
-  "sourceUrl": "https://github.com/gabrielprat/jellyfin-ambilight/releases/download/v1.1.0.0/jellyfin-plugin-ambilight_1.1.0.0.zip",
-  "checksum": "md5-checksum-here",
-  "timestamp": "2026-03-01T00:00:00Z"
-}
-```
-
-Keep older versions in the array so users can downgrade if needed.
+**No manual action required!** Do not manually add a new version to manifest.json before releasing—the workflow adds it and deduplicates by version so the same version is never listed twice.
 
 ## Repository URL
 

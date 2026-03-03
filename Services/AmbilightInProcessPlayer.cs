@@ -282,6 +282,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
             float smoothTau = noSmoothing ? 0.0f : ClampF(smoothSeconds, 0.001f, 5.0f);
 
             var emaAcc = (float[]?)null;
+            byte[]? lastFrameToSend = null;
 
             float gammaBase = (float)_config.AmbilightGamma;
             float saturation = (float)_config.AmbilightSaturation;
@@ -383,15 +384,26 @@ public sealed class AmbilightInProcessPlayer : IDisposable
 
                 if (pausedNow)
                 {
-                    // While paused we simply sleep; WLED keeps displaying the last frame.
+                    // While paused we keep sending the last frame at a low rate so WLED
+                    // does not time out and revert to its previous state.
                     try
                     {
-                        await Task.Delay(80, cancellationToken).ConfigureAwait(false);
+                        if (lastFrameToSend != null && lastFrameToSend.Length > 0)
+                        {
+                            await udp.SendAsync(lastFrameToSend, lastFrameToSend.Length).ConfigureAwait(false);
+                        }
+
+                        await Task.Delay(200, cancellationToken).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException)
                     {
                         break;
                     }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "[Ambilight] Failed to send paused frame");
+                    }
+
                     continue;
                 }
 
@@ -556,6 +568,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                 try
                 {
                     await udp.SendAsync(frameToSend, frameToSend.Length).ConfigureAwait(false);
+                    lastFrameToSend = frameToSend;
                     if (_config.Debug && frameIndex > 0 && frameIndex % 100 == 0)
                     {
                         _logger.LogInformation("[Ambilight] Broadcast: frame {FrameIndex}/{TotalFrames}", frameIndex, frames.Count);
