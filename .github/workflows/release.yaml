@@ -110,10 +110,9 @@ jobs:
         git checkout master
         git pull origin master
         
-        # Update manifest.json again on master branch
+        # Prepend new version to manifest.json (keep all previous versions; avoid duplicates)
         TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
         
-        # Extract changelog from RELEASE_NOTES file in release-notes folder
         RELEASE_NOTES_FILE="release-notes/RELEASE_NOTES_v${{ steps.version.outputs.VERSION }}.md"
         if [ -f "$RELEASE_NOTES_FILE" ]; then
           echo "Found release notes: $RELEASE_NOTES_FILE"
@@ -123,20 +122,20 @@ jobs:
           CHANGELOG="\"See release notes at: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}\""
         fi
         
+        # Build new version object and prepend to existing versions (do not overwrite or duplicate)
         jq --arg version "${{ steps.version.outputs.VERSION }}" \
            --arg checksum "${{ steps.checksum.outputs.CHECKSUM }}" \
            --arg timestamp "$TIMESTAMP" \
            --arg sourceUrl "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/jellyfin-plugin-ambilight_${{ steps.version.outputs.VERSION }}.zip" \
            --argjson changelog "$CHANGELOG" \
-           '.[0].versions[0].version = $version |
-            .[0].versions[0].checksum = $checksum |
-            .[0].versions[0].timestamp = $timestamp |
-            .[0].versions[0].sourceUrl = $sourceUrl |
-            .[0].versions[0].changelog = $changelog' \
+           --arg targetAbi "10.10.0.0" \
+           '.[0].versions = [
+             { version: $version, changelog: $changelog, targetAbi: $targetAbi, sourceUrl: $sourceUrl, checksum: $checksum, timestamp: $timestamp }
+           ] + .[0].versions | unique_by(.version)' \
            manifest.json > manifest.json.tmp
         mv manifest.json.tmp manifest.json
         
-        echo "Manifest updated on master branch"
+        echo "Manifest updated on master branch (new version prepended)"
         
         git add manifest.json
         
