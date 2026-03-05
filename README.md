@@ -25,28 +25,18 @@ Ambilight creates ambient lighting that matches the colors on your screen edges,
 
 ## Installation
 
-### Step 1: Install the Plugin
+### Docker Storage Volume (Do This First For Docker Installs)
 
-1. Download the latest `Jellyfin.Plugin.Ambilight.dll` from the releases
-2. Copy it to your Jellyfin plugins folder:
-   - Default: `/config/plugins/Ambilight/`
-   - Create the folder if it doesn't exist
-3. Restart Jellyfin
+If Jellyfin runs in Docker, set up a persistent volume for ambilight binary data before installing the plugin.
 
-**Important:** Only copy the `.dll` file - no other files are needed.
-
-### Step 2: Configure Docker Volume (Docker Users Only)
-
-If you're running Jellyfin in Docker, you need to add a volume for ambilight data storage.
-
-Add this line to your `docker-compose.yml` under `volumes:`:
+Add this line to your `docker-compose.yml` under `volumes`:
 
 ```yaml
 volumes:
   - /path/on/your/host/ambilight-data:/config/data/ambilight
 ```
 
-Or if using `docker run`:
+Or with `docker run`:
 
 ```bash
 -v /path/on/your/host/ambilight-data:/config/data/ambilight
@@ -63,7 +53,28 @@ services:
       - /mnt/jellyfin/ambilight:/config/data/ambilight  # Add this line
 ```
 
-This folder will store the extracted ambilight data files (`.bin` files) for your videos.
+This folder stores extracted ambilight binary files (`.bin`) and should persist across container restarts.
+
+### Plugin Repository (Recommended)
+
+1. Go to **Jellyfin Dashboard** -> **Administration** -> **Plugins** -> **Repositories**
+2. Click **Add Repository**
+3. Enter:
+   - **Name:** `Ambilight`
+   - **URL:** `https://raw.githubusercontent.com/gabrielprat/jellyfin-ambilight/refs/heads/master/manifest.json`
+4. Save, then open **Catalog**
+5. Search for **Ambilight** and click **Install**
+6. Restart Jellyfin
+
+### Manual Install (Fallback)
+
+1. Download the latest `jellyfin-plugin-ambilight_x.x.x.zip` from [Releases](https://github.com/gabrielprat/jellyfin-ambilight/releases)
+2. Extract the zip
+3. Copy the `Jellyfin.Plugin.Ambilight` folder to your Jellyfin plugins directory:
+   - Linux: `/var/lib/jellyfin/plugins/`
+   - Docker: `/config/plugins/`
+   - Windows: `C:\ProgramData\Jellyfin\Server\plugins\`
+4. Restart Jellyfin
 
 ## Configuration
 
@@ -157,7 +168,6 @@ The plugin includes a built-in extraction manager that handles video processing:
 The plugin looks for:
 - Movies
 - TV show episodes
-- Videos matching your time window settings
 - Items without existing ambilight data
 
 #### Monitoring Extraction

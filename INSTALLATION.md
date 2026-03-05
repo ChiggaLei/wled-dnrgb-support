@@ -1,18 +1,8 @@
 # Installation Guide
 
-## Quick Install
+## Docker Data Volume (Do This First For Docker)
 
-1. **Download** the latest `jellyfin-plugin-ambilight_x.x.x.x.zip` from [Releases](https://github.com/gabrielprat/jellyfin-ambilight/releases)
-2. **Extract** the zip file
-3. **Copy** the `Jellyfin.Plugin.Ambilight` folder to your Jellyfin plugins directory:
-   - Linux: `/var/lib/jellyfin/plugins/`
-   - Windows: `C:\ProgramData\Jellyfin\Server\plugins\`
-   - Docker: `/config/plugins/`
-4. **Restart** Jellyfin
-
-## Docker Installation
-
-If running Jellyfin in Docker, you also need to add a volume for ambilight data:
+If running Jellyfin in Docker, add a persistent volume for ambilight data before installing the plugin:
 
 ```yaml
 services:
@@ -28,17 +18,25 @@ Or with docker run:
 docker run -v /path/to/ambilight-data:/config/data/ambilight jellyfin/jellyfin
 ```
 
-## Adding the Plugin Repository (Optional)
+## Preferred: Plugin Repository Install
 
-You can add this repository to Jellyfin for easier updates:
-
-1. Go to **Dashboard** → **Plugins** → **Repositories**
+1. Go to **Jellyfin Dashboard** -> **Administration** -> **Plugins** -> **Repositories**
 2. Click **Add Repository**
 3. Enter:
-   - **Repository Name**: Ambilight Plugin
-   - **Repository URL**: `https://raw.githubusercontent.com/gabrielprat/jellyfin-ambilight/master/manifest.json`
-4. Save and go to **Catalog**
-5. Find **Ambilight** and click **Install**
+   - **Repository Name**: `Ambilight`
+   - **Repository URL**: `https://raw.githubusercontent.com/gabrielprat/jellyfin-ambilight/refs/heads/master/manifest.json`
+4. Save, open **Catalog**, find **Ambilight**, and click **Install**
+5. Restart Jellyfin
+
+## Manual Install (Fallback)
+
+1. Download the latest `jellyfin-plugin-ambilight_x.x.x.zip` from [Releases](https://github.com/gabrielprat/jellyfin-ambilight/releases)
+2. Extract the zip file
+3. Copy the `Jellyfin.Plugin.Ambilight` folder to your Jellyfin plugins directory:
+   - Linux: `/var/lib/jellyfin/plugins/`
+   - Windows: `C:\ProgramData\Jellyfin\Server\plugins\`
+   - Docker: `/config/plugins/`
+4. Restart Jellyfin
 
 ## Verification
 
