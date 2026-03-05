@@ -2,6 +2,13 @@
 
 All notable changes to the Jellyfin Ambilight Plugin will be documented in this file.
 
+## [1.6.0] - 2026-03-05
+
+### Changed
+- **Serialized extraction pipeline** - Automatic extraction triggered by new library items now runs strictly one item at a time across the plugin, preventing parallel extraction jobs and reducing host CPU pressure.
+- **Extraction manager storage summary** - Added a total binary disk usage counter in the manager UI with automatic unit formatting (MB/GB/TB).
+- **Version bump and release metadata refresh** - Updated plugin version to `1.6.0` across build and documentation assets, and prepared release notes/manifest metadata for the new release.
+
 ## [1.0.0.0] - 2026-02-16
 
 ### Added
