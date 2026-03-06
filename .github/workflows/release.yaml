@@ -43,6 +43,25 @@ jobs:
           echo "ERROR: thumb.png not found in build output or docs/" >&2
           exit 1
         fi
+        VERSION="${{ steps.version.outputs.VERSION }}"
+        if [[ "$VERSION" == *.*.*.* ]]; then
+          FULL_VERSION="$VERSION"
+        else
+          FULL_VERSION="${VERSION}.0"
+        fi
+        cat > release/Jellyfin.Plugin.Ambilight/meta.json <<EOF
+        {
+          "guid": "b3f6b4c7-0a3d-4bd4-a7e3-c8d5a0a1e3f0",
+          "name": "Ambilight",
+          "description": "Transform your Jellyfin viewing experience with synchronized ambient lighting via WLED",
+          "overview": "Automatic ambilight effects for movies and TV shows with real-time WLED control",
+          "owner": "Gabriel Prat",
+          "category": "General",
+          "imagePath": "thumb.png",
+          "version": "$FULL_VERSION",
+          "targetAbi": "10.10.0.0"
+        }
+        EOF
         cd release
         zip -r jellyfin-plugin-ambilight_${{ steps.version.outputs.VERSION }}.zip Jellyfin.Plugin.Ambilight
     
