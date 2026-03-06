@@ -13,6 +13,14 @@
         "changelog": "# Release Notes - v1.6.3\n\n## Installed Plugin Image Endpoint Fix\n\n- Fixed installed plugin thumbnail resolution for Jellyfin's local image endpoint:\n  `/Plugins/b3f6b4c70a3d4bd4a7e3c8d5a0a1e3f0/{version}/Image`.\n- Release packages now consistently include both:\n  - `thumb.png`\n  - `meta.json` with `imagePath: \"thumb.png\"`.\n\n## Workflow Packaging Consistency\n\n- Updated release/build packaging logic to ensure image metadata and file are always shipped together.\n- Prevents future releases from publishing without the required thumbnail files.\n\n## Installation & Upgrade\n\n- For installation and upgrade instructions, see `INSTALLATION.md`.\n- After upgrading:\n  1. Restart Jellyfin once to load plugin `1.6.3`.\n  2. Hard refresh the Jellyfin web UI so cached plugin images are refreshed.\n",
         "targetAbi": "10.10.0.0",
         "sourceUrl": "https://github.com/gabrielprat/jellyfin-ambilight/releases/download/v1.6.3/jellyfin-plugin-ambilight_1.6.3.zip",
+        "checksum": "5A5246F34E72D7B08C084582AACD1D75",
+        "timestamp": "2026-03-06T16:52:13Z"
+      },
+      {
+        "version": "1.6.3",
+        "changelog": "# Release Notes - v1.6.3\n\n## Installed Plugin Image Endpoint Fix\n\n- Fixed installed plugin thumbnail resolution for Jellyfin's local image endpoint:\n  `/Plugins/b3f6b4c70a3d4bd4a7e3c8d5a0a1e3f0/{version}/Image`.\n- Release packages now consistently include both:\n  - `thumb.png`\n  - `meta.json` with `imagePath: \"thumb.png\"`.\n\n## Workflow Packaging Consistency\n\n- Updated release/build packaging logic to ensure image metadata and file are always shipped together.\n- Prevents future releases from publishing without the required thumbnail files.\n\n## Installation & Upgrade\n\n- For installation and upgrade instructions, see `INSTALLATION.md`.\n- After upgrading:\n  1. Restart Jellyfin once to load plugin `1.6.3`.\n  2. Hard refresh the Jellyfin web UI so cached plugin images are refreshed.\n",
+        "targetAbi": "10.10.0.0",
+        "sourceUrl": "https://github.com/gabrielprat/jellyfin-ambilight/releases/download/v1.6.3/jellyfin-plugin-ambilight_1.6.3.zip",
         "checksum": "REPLACE_WITH_ACTUAL_CHECKSUM",
         "timestamp": "2026-03-06T00:00:00Z"
       },
