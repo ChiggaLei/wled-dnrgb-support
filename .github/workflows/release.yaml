@@ -35,6 +35,14 @@ jobs:
         mkdir -p release/Jellyfin.Plugin.Ambilight
         cp bin/Release/net8.0/Jellyfin.Plugin.Ambilight.dll release/Jellyfin.Plugin.Ambilight/
         cp bin/Release/net8.0/Jellyfin.Plugin.Ambilight.pdb release/Jellyfin.Plugin.Ambilight/ || true
+        if [ -f bin/Release/net8.0/thumb.png ]; then
+          cp bin/Release/net8.0/thumb.png release/Jellyfin.Plugin.Ambilight/thumb.png
+        elif [ -f docs/thumb.png ]; then
+          cp docs/thumb.png release/Jellyfin.Plugin.Ambilight/thumb.png
+        else
+          echo "ERROR: thumb.png not found in build output or docs/" >&2
+          exit 1
+        fi
         cd release
         zip -r jellyfin-plugin-ambilight_${{ steps.version.outputs.VERSION }}.zip Jellyfin.Plugin.Ambilight
     
