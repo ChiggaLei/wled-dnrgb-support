@@ -33,6 +33,7 @@ public class AmbilightExtractorService
     private readonly AmbilightStorageService _storage;
     private readonly PluginConfiguration _config;
     private readonly AmbilightInProcessExtractor _extractorCore;
+    private readonly SemaphoreSlim _extractionLock = new(1, 1);
 
     public AmbilightExtractorService(
         ILogger<AmbilightExtractorService> logger,
@@ -238,6 +239,13 @@ public class AmbilightExtractorService
     /// </summary>
     public async Task RunExtractorForItemAsync(AmbilightItem item, CancellationToken cancellationToken)
     {
+        var acquiredImmediately = await _extractionLock.WaitAsync(0, cancellationToken).ConfigureAwait(false);
+        if (!acquiredImmediately)
+        {
+            _logger.LogInformation("[Ambilight] Extraction already running; waiting turn for {ItemName}", item.Name);
+            await _extractionLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         var binPath = _storage.GetBinaryPath(item.Id);
         
         // Ensure data folder exists
@@ -309,6 +317,7 @@ public class AmbilightExtractorService
         {
             item.ExtractionAttempts += 1;
             _storage.SaveOrUpdateItem(item);
+            _extractionLock.Release();
         }
     }
 

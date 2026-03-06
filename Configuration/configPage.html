@@ -285,7 +285,7 @@ the Free Software Foundation, either version 3 of the License, or
                         <input id="searchBox" type="text" is="emby-input" placeholder="Search videos..." style="flex: 1; min-width: 200px;">
                     </div>
 
-                    <div style="display: flex; gap: 2em; margin-bottom: 1em;">
+                    <div style="display: flex; gap: 2em; margin-bottom: 1em; align-items: center; flex-wrap: wrap;">
                         <div style="padding: 0.5em;">
                             <span class="material-icons" style="color: #4ade80; vertical-align: middle;">check_circle</span>
                             <span id="statsExtracted">0</span> Extracted
@@ -297,6 +297,10 @@ the Free Software Foundation, either version 3 of the License, or
                         <div style="padding: 0.5em;">
                             <span class="material-icons" style="color: #ef4444; vertical-align: middle;">error</span>
                             <span id="statsFailed">0</span> Failed
+                        </div>
+                        <div style="padding: 0.5em; margin-left: auto; white-space: nowrap;">
+                            Total disk space used by binaries:
+                            <strong id="statsBinaryDiskUsage">0 MB</strong>
                         </div>
                     </div>
 
@@ -532,8 +536,8 @@ the Free Software Foundation, either version 3 of the License, or
                 });
             })();
 
-            // ===== MANAGER TAB LOGIC ===== v1.5.9 - Scheduled Task Integration
-            console.log('[Ambilight] Config v1.5.9 - Scheduled Task Integration');
+            // ===== MANAGER TAB LOGIC ===== v1.6.0 - Scheduled Task Integration
+            console.log('[Ambilight] Config v1.6.0 - Scheduled Task Integration');
             
             let allVideos = [];
             let currentFilter = '';
@@ -975,14 +979,44 @@ the Free Software Foundation, either version 3 of the License, or
                 }
             }
 
+            function formatDiskSize(bytes) {
+                const oneMb = 1024 * 1024;
+                const oneGb = oneMb * 1024;
+                const oneTb = oneGb * 1024;
+
+                if (!Number.isFinite(bytes) || bytes <= 0) {
+                    return '0 MB';
+                }
+
+                if (bytes >= oneTb) {
+                    return (bytes / oneTb).toFixed(2) + ' TB';
+                }
+
+                if (bytes >= oneGb) {
+                    return (bytes / oneGb).toFixed(2) + ' GB';
+                }
+
+                return (bytes / oneMb).toFixed(2) + ' MB';
+            }
+
             function updateStatistics() {
                 const extracted = allVideos.filter(v => v.ambilightStatus?.HasBinary).length;
                 const failed = allVideos.filter(v => v.ambilightStatus?.ExtractionStatus === 'failed').length;
                 const pending = allVideos.length - extracted - failed;
+                const totalBinaryBytes = allVideos.reduce(function(sum, video) {
+                    const status = video.ambilightStatus;
+                    if (!status || !status.HasBinary) {
+                        return sum;
+                    }
+
+                    const size = Number(status.BinarySize);
+                    return sum + (Number.isFinite(size) && size > 0 ? size : 0);
+                }, 0);
 
                 document.getElementById('statsExtracted').textContent = extracted;
                 document.getElementById('statsPending').textContent = pending;
                 document.getElementById('statsFailed').textContent = failed;
+                document.getElementById('statsBinaryDiskUsage').textContent = formatDiskSize(totalBinaryBytes);
             }
 
             function escapeHtml(text) {
