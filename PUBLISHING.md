@@ -16,8 +16,8 @@ Update the version in these files:
 
 1. **Jellyfin.Plugin.Ambilight.csproj**
    ```xml
-   <AssemblyVersion>1.6.0</AssemblyVersion>
-   <FileVersion>1.6.0</FileVersion>
+   <AssemblyVersion>1.6.2</AssemblyVersion>
+   <FileVersion>1.6.2</FileVersion>
    ```
 
 2. **CHANGELOG.md**
