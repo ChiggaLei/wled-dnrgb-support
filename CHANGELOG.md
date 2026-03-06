@@ -2,6 +2,12 @@
 
 All notable changes to the Jellyfin Ambilight Plugin will be documented in this file.
 
+## [1.6.2] - 2026-03-06
+
+### Fixed
+- **Plugin thumbnail packaging** - Release assets now always include `thumb.png` in the plugin folder so the installed plugin card can display the icon correctly in Jellyfin.
+- **Workflow parity** - Updated both release workflows to package the thumbnail consistently and fail early if the image is missing.
+
 ## [1.6.0] - 2026-03-05
 
 ### Changed
