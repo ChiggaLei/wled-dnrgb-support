@@ -287,9 +287,10 @@ public sealed class AmbilightInProcessPlayer : IDisposable
             float gammaBase = (float)_config.AmbilightGamma;
             float saturation = (float)_config.AmbilightSaturation;
             float brightnessTarget = (float)_config.AmbilightBrightnessTarget;
-            float gammaRed = (float)_config.AmbilightGammaRed;
-            float gammaGreen = (float)_config.AmbilightGammaGreen;
-            float gammaBlue = (float)_config.AmbilightGammaBlue;
+            // Guard per-channel gamma against invalid/unstable values from persisted config.
+            float gammaRed = ClampF((float)_config.AmbilightGammaRed, 0.1f, 5.0f);
+            float gammaGreen = ClampF((float)_config.AmbilightGammaGreen, 0.1f, 5.0f);
+            float gammaBlue = ClampF((float)_config.AmbilightGammaBlue, 0.1f, 5.0f);
             float redBoost = (float)_config.AmbilightRedBoost;
             float greenBoost = (float)_config.AmbilightGreenBoost;
             float blueBoost = (float)_config.AmbilightBlueBoost;
@@ -476,7 +477,6 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                 var outFrame = new byte[totalTgt * bytesPerLed];
 
                 float sUser = ClampF(saturation, 0.0f, 5.0f);
-                float gUser = Math.Max(0.01f, (float)_config.AmbilightGamma);
                 float bTarget = Math.Max(1.0f, brightnessTarget);
                 float minB = Math.Max(0.0f, minLedBrightness);
 
@@ -505,9 +505,10 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                     float bLin = (float)MathF.Pow(bN, gammaBlue);
 
                     float avgIntensity = (rLin + gLin + bLin) / 3.0f;
-                    float rSat = avgIntensity + (rLin - avgIntensity) * sUser;
-                    float gSat = avgIntensity + (gLin - avgIntensity) * sUser;
-                    float bSat = avgIntensity + (bLin - avgIntensity) * sUser;
+                    // Clamp saturation-adjusted channels before pow() to avoid NaN from negatives.
+                    float rSat = ClampF(avgIntensity + (rLin - avgIntensity) * sUser, 0.0f, 1.0f);
+                    float gSat = ClampF(avgIntensity + (gLin - avgIntensity) * sUser, 0.0f, 1.0f);
+                    float bSat = ClampF(avgIntensity + (bLin - avgIntensity) * sUser, 0.0f, 1.0f);
 
                     float rG = ClampF((float)MathF.Pow(rSat, invGamma), 0.0f, 1.0f);
                     float gG = ClampF((float)MathF.Pow(gSat, invGamma), 0.0f, 1.0f);
