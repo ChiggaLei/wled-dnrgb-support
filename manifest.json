@@ -9,20 +9,20 @@
     "imageUrl": "https://raw.githubusercontent.com/gabrielprat/jellyfin-ambilight/refs/heads/master/docs/thumb.png",
     "versions": [
       {
-        "version": "1.6.3",
-        "changelog": "# Release Notes - v1.6.3\n\n## Installed Plugin Image Endpoint Fix\n\n- Fixed installed plugin thumbnail resolution for Jellyfin's local image endpoint:\n  `/Plugins/b3f6b4c70a3d4bd4a7e3c8d5a0a1e3f0/{version}/Image`.\n- Release packages now consistently include both:\n  - `thumb.png`\n  - `meta.json` with `imagePath: \"thumb.png\"`.\n\n## Workflow Packaging Consistency\n\n- Updated release/build packaging logic to ensure image metadata and file are always shipped together.\n- Prevents future releases from publishing without the required thumbnail files.\n\n## Installation & Upgrade\n\n- For installation and upgrade instructions, see `INSTALLATION.md`.\n- After upgrading:\n  1. Restart Jellyfin once to load plugin `1.6.3`.\n  2. Hard refresh the Jellyfin web UI so cached plugin images are refreshed.\n",
+        "version": "1.6.4",
+        "changelog": "# Release Notes - v1.6.4\n\n## Color Fidelity Fix (Extractor + Player)\n\n- Fixed a regression that could produce washed/white-blue ambilight output and poor color matching with video content.\n- Player color processing is now hardened to avoid invalid channel math:\n  - per-channel gamma values are clamped to a safe range\n  - saturation-adjusted channels are clamped before power/gamma transforms\n- Extractor FFmpeg filter chain now explicitly enforces RGB conversion (`format=rgb24`) before raw frame output for more consistent colors across hardware/driver combinations.\n\n## Manifest Cleanup\n\n- Removed duplicate historical version entries from `manifest.json` so each release version appears once.\n\n## Installation & Upgrade\n\n- For installation and upgrade instructions, see `INSTALLATION.md`.\n- After upgrading:\n  1. Restart Jellyfin once to load plugin `1.6.4`.\n  2. Re-test playback on content that previously looked white/blueish.\n  3. If you still see stale color data on old binaries, re-run extraction for affected items from the Manager tab.\n",
         "targetAbi": "10.10.0.0",
-        "sourceUrl": "https://github.com/gabrielprat/jellyfin-ambilight/releases/download/v1.6.3/jellyfin-plugin-ambilight_1.6.3.zip",
-        "checksum": "5A5246F34E72D7B08C084582AACD1D75",
-        "timestamp": "2026-03-06T16:52:13Z"
+        "sourceUrl": "https://github.com/gabrielprat/jellyfin-ambilight/releases/download/v1.6.4/jellyfin-plugin-ambilight_1.6.4.zip",
+        "checksum": "REPLACE_WITH_ACTUAL_CHECKSUM",
+        "timestamp": "2026-03-07T00:00:00Z"
       },
       {
         "version": "1.6.3",
         "changelog": "# Release Notes - v1.6.3\n\n## Installed Plugin Image Endpoint Fix\n\n- Fixed installed plugin thumbnail resolution for Jellyfin's local image endpoint:\n  `/Plugins/b3f6b4c70a3d4bd4a7e3c8d5a0a1e3f0/{version}/Image`.\n- Release packages now consistently include both:\n  - `thumb.png`\n  - `meta.json` with `imagePath: \"thumb.png\"`.\n\n## Workflow Packaging Consistency\n\n- Updated release/build packaging logic to ensure image metadata and file are always shipped together.\n- Prevents future releases from publishing without the required thumbnail files.\n\n## Installation & Upgrade\n\n- For installation and upgrade instructions, see `INSTALLATION.md`.\n- After upgrading:\n  1. Restart Jellyfin once to load plugin `1.6.3`.\n  2. Hard refresh the Jellyfin web UI so cached plugin images are refreshed.\n",
         "targetAbi": "10.10.0.0",
         "sourceUrl": "https://github.com/gabrielprat/jellyfin-ambilight/releases/download/v1.6.3/jellyfin-plugin-ambilight_1.6.3.zip",
-        "checksum": "REPLACE_WITH_ACTUAL_CHECKSUM",
-        "timestamp": "2026-03-06T00:00:00Z"
+        "checksum": "5A5246F34E72D7B08C084582AACD1D75",
+        "timestamp": "2026-03-06T16:52:13Z"
       },
       {
         "version": "1.6.2",
@@ -33,14 +33,6 @@
         "timestamp": "2026-03-06T13:07:18Z"
       },
       {
-        "version": "1.6.2",
-        "changelog": "# Release Notes - v1.6.2\n\n## Plugin Thumbnail Fix\n\n- Fixed plugin packaging so `thumb.png` is always included in release zip assets.\n- This ensures Jellyfin can display the plugin image on installed/active plugin cards.\n\n## Build/Release Workflow Hardening\n\n- Updated both GitHub workflows that produce release packages to include `thumb.png`.\n- Workflows now fail early if the thumbnail is missing, preventing broken image releases.\n\n## Installation & Upgrade\n\n- For installation and upgrade instructions, see `INSTALLATION.md`.\n- After upgrading:\n  1. Restart Jellyfin once to load plugin `1.6.2`.\n  2. Hard refresh the Jellyfin web UI so cached plugin images are refreshed.\n",
-        "targetAbi": "10.10.0.0",
-        "sourceUrl": "https://github.com/gabrielprat/jellyfin-ambilight/releases/download/v1.6.2/jellyfin-plugin-ambilight_1.6.2.zip",
-        "checksum": "REPLACE_WITH_ACTUAL_CHECKSUM",
-        "timestamp": "2026-03-06T00:00:00Z"
-      },
-      {
         "version": "1.6.0",
         "changelog": "# Release Notes - v1.6.0\n\n## Sequential Auto-Extraction For New Library Items\n\n- New videos added to non-excluded libraries are now extracted one by one.\n- Parallel extraction runs are now serialized through a single extraction gate to reduce CPU spikes on the Jellyfin host.\n- This also prevents overlap between automatic, manual, and scheduled extraction triggers.\n\n## Extraction Manager Disk Usage Counter\n\n- The Extraction Manager now shows the total disk space used by extracted `.bin` files.\n- The total appears to the right of the status counters.\n- Size is automatically formatted using the best-fitting unit (`MB`, `GB`, or `TB`).\n\n## Versioning\n\n- Plugin version bumped to `1.6.0`.\n- Manifest metadata now includes the `1.6.0` release entry.\n\n## Installation & Upgrade\n\n- For installation and upgrade instructions, see `INSTALLATION.md`.\n- After upgrading:\n  1. Restart Jellyfin once to load plugin `1.6.0`.\n  2. Add a couple of new videos and verify extraction proceeds sequentially (one item at a time) in logs.\n",
         "targetAbi": "10.10.0.0",
@@ -49,28 +41,12 @@
         "timestamp": "2026-03-06T09:39:48Z"
       },
       {
-        "version": "1.6.0",
-        "changelog": "# Release Notes - v1.6.0\n\n## Sequential Auto-Extraction For New Library Items\n\n- New videos added to non-excluded libraries are now extracted one by one.\n- Parallel extraction runs are now serialized through a single extraction gate to reduce CPU spikes on the Jellyfin host.\n- This also prevents overlap between automatic, manual, and scheduled extraction triggers.\n\n## Extraction Manager Disk Usage Counter\n\n- The Extraction Manager now shows the total disk space used by extracted `.bin` files.\n- The total appears to the right of the status counters.\n- Size is automatically formatted using the best-fitting unit (`MB`, `GB`, or `TB`).\n\n## Versioning\n\n- Plugin version bumped to `1.6.0`.\n- Manifest metadata now includes the `1.6.0` release entry.\n\n## Installation & Upgrade\n\n- For installation and upgrade instructions, see `INSTALLATION.md`.\n- After upgrading:\n  1. Restart Jellyfin once to load plugin `1.6.0`.\n  2. Add a couple of new videos and verify extraction proceeds sequentially (one item at a time) in logs.\n",
-        "targetAbi": "10.10.0.0",
-        "sourceUrl": "https://github.com/gabrielprat/jellyfin-ambilight/releases/download/v1.6.0/jellyfin-plugin-ambilight_1.6.0.zip",
-        "checksum": "REPLACE_WITH_ACTUAL_CHECKSUM",
-        "timestamp": "2026-03-05T00:00:00Z"
-      },
-      {
         "version": "1.5.9",
         "changelog": "# Release Notes - v1.5.9\n\n## ⏸ Improved Pause Behavior\n\n- When playback is paused, Ambilight now continuously re-sends the last video frame to WLED so the LEDs stay frozen on that frame instead of reverting to the controller’s previous effect or color.\n- On resume, playback timing is preserved so Ambilight continues in sync with the video.\n\n## 📦 Installation & Upgrade\n\n- For installation and upgrade instructions, see the `INSTALLATION.md` file in the repository.\n- After upgrading:\n  1. Restart Jellyfin once to load the new plugin version.\n  2. Verify that pausing/resuming playback now keeps Ambilight locked to the paused frame and resumes smoothly in sync.\n\n",
         "targetAbi": "10.10.0.0",
         "sourceUrl": "https://github.com/gabrielprat/jellyfin-ambilight/releases/download/v1.5.9/jellyfin-plugin-ambilight_1.5.9.zip",
         "checksum": "C82DED7D255DCBB36197C2322EE0D343",
         "timestamp": "2026-03-03T13:01:40Z"
-      },
-      {
-        "version": "1.5.9",
-        "changelog": "# Release Notes - v1.5.9\n\n## Improved Pause Behavior\n\n- When playback is paused, Ambilight now keeps sending the last video frame to WLED so LEDs stay frozen on that frame instead of reverting to the controller’s previous state.\n- On resume, playback timing is preserved so Ambilight continues in sync with the video.\n\nSee `INSTALLATION.md` for install/upgrade.",
-        "targetAbi": "10.10.0.0",
-        "sourceUrl": "https://github.com/gabrielprat/jellyfin-ambilight/releases/download/v1.5.9/jellyfin-plugin-ambilight_1.5.9.zip",
-        "checksum": "REPLACE_WITH_ACTUAL_CHECKSUM",
-        "timestamp": "2026-02-27T20:00:00Z"
       },
       {
         "version": "1.5.8",

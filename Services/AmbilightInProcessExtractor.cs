@@ -184,7 +184,9 @@ public sealed class AmbilightInProcessExtractor
         
         // Use simple software filter chain - hardware acceleration is only for decoding
         // ffmpeg will automatically transfer frames to system memory for filtering
-        string filterChain = $"scale={ExtractWidth}:{ExtractHeight}";
+        // Keep pixel format explicit in the filter graph to avoid driver-dependent
+        // color conversion quirks before writing rawvideo bytes.
+        string filterChain = $"scale={ExtractWidth}:{ExtractHeight},format=rgb24";
         
         return $"{baseArgs} {hwaccelArgs} -i \"{videoPath}\" -vf {filterChain} -pix_fmt rgb24 -f rawvideo pipe:1".Trim();
     }
