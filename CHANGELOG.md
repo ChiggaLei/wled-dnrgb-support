@@ -2,6 +2,13 @@
 
 All notable changes to the Jellyfin Ambilight Plugin will be documented in this file.
 
+## [1.6.4] - 2026-03-07
+
+### Fixed
+- **Blue/white washed colors during playback** - Hardened player-side color math by clamping per-channel gamma and saturation-adjusted values before power operations, preventing invalid channel values from collapsing color output.
+- **Extractor RGB consistency** - Made RGB output format explicit in the FFmpeg filter graph (`format=rgb24`) to avoid driver-dependent color conversion quirks in raw frame extraction.
+- **Manifest version duplication cleanup** - Removed duplicate historical entries in `manifest.json` so each released version is listed once.
+
 ## [1.6.3] - 2026-03-06
 
 ### Fixed
