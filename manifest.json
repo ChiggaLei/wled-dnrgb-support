@@ -13,6 +13,14 @@
         "changelog": "# Release Notes - v1.6.4\n\n## Color Fidelity Fix (Extractor + Player)\n\n- Fixed a regression that could produce washed/white-blue ambilight output and poor color matching with video content.\n- Player color processing is now hardened to avoid invalid channel math:\n  - per-channel gamma values are clamped to a safe range\n  - saturation-adjusted channels are clamped before power/gamma transforms\n- Extractor FFmpeg filter chain now explicitly enforces RGB conversion (`format=rgb24`) before raw frame output for more consistent colors across hardware/driver combinations.\n\n## Manifest Cleanup\n\n- Removed duplicate historical version entries from `manifest.json` so each release version appears once.\n\n## Installation & Upgrade\n\n- For installation and upgrade instructions, see `INSTALLATION.md`.\n- After upgrading:\n  1. Restart Jellyfin once to load plugin `1.6.4`.\n  2. Re-test playback on content that previously looked white/blueish.\n  3. If you still see stale color data on old binaries, re-run extraction for affected items from the Manager tab.\n",
         "targetAbi": "10.10.0.0",
         "sourceUrl": "https://github.com/gabrielprat/jellyfin-ambilight/releases/download/v1.6.4/jellyfin-plugin-ambilight_1.6.4.zip",
+        "checksum": "F1ABFE62786874C1CEE75F6C67382C63",
+        "timestamp": "2026-03-07T09:01:31Z"
+      },
+      {
+        "version": "1.6.4",
+        "changelog": "# Release Notes - v1.6.4\n\n## Color Fidelity Fix (Extractor + Player)\n\n- Fixed a regression that could produce washed/white-blue ambilight output and poor color matching with video content.\n- Player color processing is now hardened to avoid invalid channel math:\n  - per-channel gamma values are clamped to a safe range\n  - saturation-adjusted channels are clamped before power/gamma transforms\n- Extractor FFmpeg filter chain now explicitly enforces RGB conversion (`format=rgb24`) before raw frame output for more consistent colors across hardware/driver combinations.\n\n## Manifest Cleanup\n\n- Removed duplicate historical version entries from `manifest.json` so each release version appears once.\n\n## Installation & Upgrade\n\n- For installation and upgrade instructions, see `INSTALLATION.md`.\n- After upgrading:\n  1. Restart Jellyfin once to load plugin `1.6.4`.\n  2. Re-test playback on content that previously looked white/blueish.\n  3. If you still see stale color data on old binaries, re-run extraction for affected items from the Manager tab.\n",
+        "targetAbi": "10.10.0.0",
+        "sourceUrl": "https://github.com/gabrielprat/jellyfin-ambilight/releases/download/v1.6.4/jellyfin-plugin-ambilight_1.6.4.zip",
         "checksum": "REPLACE_WITH_ACTUAL_CHECKSUM",
         "timestamp": "2026-03-07T00:00:00Z"
       },
