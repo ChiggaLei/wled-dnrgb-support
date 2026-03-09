@@ -30,8 +30,6 @@ namespace Jellyfin.Plugin.Ambilight
         public int AmbilightBottomLedCount { get; set; } = 89;
         public int AmbilightLeftLedCount { get; set; } = 49;
         public int AmbilightRightLedCount { get; set; } = 49;
-        public bool AmbilightRgbw { get; set; } = false;
-        
         // Ambilight Visual Settings (global preferences)
         public double AmbilightSyncLeadSeconds { get; set; } = 0.2;
         /// <summary>

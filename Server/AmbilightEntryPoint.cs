@@ -60,6 +60,8 @@ public class AmbilightEntryPoint : IHostedService
         _config = Plugin.Instance?.Configuration ?? new PluginConfiguration();
     }
 
+    private PluginConfiguration Config => Plugin.Instance?.Configuration ?? _config;
+
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("[Ambilight] Background service starting...");
@@ -176,9 +178,9 @@ public class AmbilightEntryPoint : IHostedService
         if (_extractor == null || _storage == null || e.Item.Path == null) return;
         
         // Check if auto-extraction is enabled
-        if (!_config.ExtractNewlyAddedItems)
+        if (!Config.ExtractNewlyAddedItems)
         {
-            if (_config.Debug)
+            if (Config.Debug)
             {
                 _logger.LogDebug("[Ambilight] Auto-extraction disabled, skipping new item: {ItemName}", e.Item.Name);
             }
@@ -191,7 +193,7 @@ public class AmbilightEntryPoint : IHostedService
         
         // Check if item is from an excluded library
         var libraryId = GetLibraryId(e.Item);
-        var excluded = _config.ExcludedLibraryIds ?? new List<string>();
+        var excluded = Config.ExcludedLibraryIds ?? new List<string>();
         var normalizedExcluded = excluded.Select(id => id.Replace("-", string.Empty).ToLowerInvariant()).ToHashSet();
         
         if (!string.IsNullOrEmpty(libraryId) && normalizedExcluded.Count > 0)
@@ -199,7 +201,7 @@ public class AmbilightEntryPoint : IHostedService
             var normalizedLibraryId = libraryId.Replace("-", string.Empty).ToLowerInvariant();
             if (normalizedExcluded.Contains(normalizedLibraryId))
             {
-                if (_config.Debug)
+                if (Config.Debug)
                 {
                     _logger.LogDebug("[Ambilight] Item {ItemName} is from excluded library, skipping extraction", e.Item.Name);
                 }
@@ -207,7 +209,7 @@ public class AmbilightEntryPoint : IHostedService
             }
         }
 
-        if (_config.Debug)
+        if (Config.Debug)
         {
             _logger.LogInformation("[Ambilight] New item added: {ItemName} - queueing for extraction", e.Item.Name);
         }
@@ -240,7 +242,7 @@ public class AmbilightEntryPoint : IHostedService
                 // Check if extraction is needed (binary doesn't exist)
                 if (!_storage.BinaryExists(itemIdStr))
                 {
-                    if (_config.Debug)
+                    if (Config.Debug)
                     {
                         _logger.LogInformation("[Ambilight] Starting extraction for new item: {ItemName}", e.Item.Name);
                     }
@@ -248,7 +250,7 @@ public class AmbilightEntryPoint : IHostedService
                 }
                 else
                 {
-                    if (_config.Debug)
+                    if (Config.Debug)
                     {
                         _logger.LogDebug("[Ambilight] Binary already exists for new item: {ItemName}", e.Item.Name);
                     }
@@ -289,7 +291,7 @@ public class AmbilightEntryPoint : IHostedService
             }
             else
             {
-                if (_config.Debug)
+                if (Config.Debug)
                 {
                     _logger.LogDebug("[Ambilight] No binary file found for removed item: {ItemName}", itemName);
                 }

@@ -33,10 +33,17 @@ public class AmbilightStorageService
         _logger.LogInformation("Ambilight storage initialized - metadata and binaries in {Folder}", GetDataFolder());
     }
 
+    private PluginConfiguration Config => Plugin.Instance?.Configuration ?? _config;
+
     private string GetDataFolder()
     {
-        var folder = _config?.AmbilightDataFolder?.Trim();
+        var folder = Config.AmbilightDataFolder?.Trim();
         return string.IsNullOrEmpty(folder) ? "/data/ambilight" : folder;
+    }
+
+    public static string GetCurrentPluginVersion()
+    {
+        return typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "unknown";
     }
 
     private string GetMetadataPath(string itemId)
@@ -121,6 +128,14 @@ public class AmbilightStorageService
             {
                 item.CreatedAt = DateTimeOffset.UtcNow;
             }
+
+            // Populate extraction metadata when absent (for backwards compatibility).
+            // The extractor service writes exact values used for each extraction run.
+            item.ExtractedByPluginVersion ??= GetCurrentPluginVersion();
+            item.ExtractionTopLedCount ??= Config.AmbilightTopLedCount;
+            item.ExtractionRightLedCount ??= Config.AmbilightRightLedCount;
+            item.ExtractionBottomLedCount ??= Config.AmbilightBottomLedCount;
+            item.ExtractionLeftLedCount ??= Config.AmbilightLeftLedCount;
 
             var json = JsonSerializer.Serialize(item, new JsonSerializerOptions
             {
@@ -227,6 +242,11 @@ public class AmbilightItem
     public int ExtractionProgress { get; set; } = 0; // 0-100 percentage (deprecated, use frames)
     public ulong ExtractionFramesCurrent { get; set; } = 0; // Current frame count
     public ulong ExtractionFramesTotal { get; set; } = 0; // Total estimated frames
+    public string? ExtractedByPluginVersion { get; set; }
+    public int? ExtractionTopLedCount { get; set; }
+    public int? ExtractionRightLedCount { get; set; }
+    public int? ExtractionBottomLedCount { get; set; }
+    public int? ExtractionLeftLedCount { get; set; }
 }
 
 public class StorageStatistics

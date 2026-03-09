@@ -45,6 +45,8 @@ public sealed class AmbilightInProcessPlayer : IDisposable
         _config = config;
     }
 
+    private PluginConfiguration Config => Plugin.Instance?.Configuration ?? _config;
+
     public void Start(string sessionId, string binPath, DeviceMapping mapping, double startSeconds, CancellationTokenSource? loadingEffectCts = null)
     {
         Stop();
@@ -111,9 +113,10 @@ public sealed class AmbilightInProcessPlayer : IDisposable
     {
         try
         {
+            var cfg = Config;
             if (!File.Exists(binPath))
             {
-                if (_config.Debug)
+                if (cfg.Debug)
                 {
                     _logger.LogInformation("[Ambilight] Binary file not found: {Path}", binPath);
                 }
@@ -121,7 +124,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                 return;
             }
 
-            if (_config.Debug)
+            if (cfg.Debug)
             {
                 _logger.LogInformation("[Ambilight] Binary file found: {Path}", binPath);
             }
@@ -148,9 +151,8 @@ public sealed class AmbilightInProcessPlayer : IDisposable
             var bottomSrc = reader.ReadUInt16();
             var leftSrc = reader.ReadUInt16();
             var rightSrc = reader.ReadUInt16();
-            var fmt = reader.ReadByte();
-            var rgbw = fmt == 1;
-            var bytesPerLed = rgbw ? 4 : 3;
+            _ = reader.ReadByte(); // fmt (reserved)
+            const int bytesPerLed = 3;
             var frameSize = (topSrc + bottomSrc + leftSrc + rightSrc) * bytesPerLed;
 
             // Target counts from mapping (falling back to source counts when unset)
@@ -166,10 +168,10 @@ public sealed class AmbilightInProcessPlayer : IDisposable
             }
             int totalTgt = tgtTop + tgtRight + tgtBottom + tgtLeft;
 
-            if (_config.Debug)
+            if (cfg.Debug)
             {
-                _logger.LogInformation("[Ambilight] Playing {Path} → {Host}:{Port} (src {Src} LEDs → tgt {Tgt} LEDs, rgbw={Rgbw})",
-                    binPath, mapping.Host, mapping.Port, totalSrc, totalTgt, rgbw);
+                _logger.LogInformation("[Ambilight] Playing {Path} → {Host}:{Port} (src {Src} LEDs → tgt {Tgt} LEDs)",
+                    binPath, mapping.Host, mapping.Port, totalSrc, totalTgt);
             }
 
             var frames = new List<byte[]>();
@@ -200,7 +202,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                 return;
             }
 
-            if (_config.Debug)
+            if (cfg.Debug)
             {
                 _logger.LogInformation("[Ambilight] Binary loaded into memory: {FrameCount} frames", frames.Count);
             }
@@ -259,12 +261,12 @@ public sealed class AmbilightInProcessPlayer : IDisposable
             using var udp = new UdpClient();
             udp.Connect(targetIp, mapping.Port);
 
-            if (_config.Debug)
+            if (cfg.Debug)
             {
                 _logger.LogInformation("[Ambilight] Connected to WLED at {Host}:{Port}", mapping.Host, mapping.Port);
             }
 
-            double baseSyncLead = _config.AmbilightSyncLeadSeconds;
+            double baseSyncLead = cfg.AmbilightSyncLeadSeconds;
             double effectiveStart = Math.Max(0.0, startSeconds + baseSyncLead);
             ulong startTsUs = (ulong)(effectiveStart * 1_000_000.0);
             int startFrame = 0;
@@ -277,24 +279,24 @@ public sealed class AmbilightInProcessPlayer : IDisposable
             var startInstant = DateTime.UtcNow;
 
             // Smoothing: configured directly in seconds. 0 = no smoothing (per-frame colors).
-            float smoothSeconds = (float)_config.AmbilightSmoothSeconds;
+            float smoothSeconds = (float)cfg.AmbilightSmoothSeconds;
             bool noSmoothing = smoothSeconds <= 0.0f;
             float smoothTau = noSmoothing ? 0.0f : ClampF(smoothSeconds, 0.001f, 5.0f);
 
             var emaAcc = (float[]?)null;
             byte[]? lastFrameToSend = null;
 
-            float gammaBase = (float)_config.AmbilightGamma;
-            float saturation = (float)_config.AmbilightSaturation;
-            float brightnessTarget = (float)_config.AmbilightBrightnessTarget;
+            float gammaBase = (float)cfg.AmbilightGamma;
+            float saturation = (float)cfg.AmbilightSaturation;
+            float brightnessTarget = (float)cfg.AmbilightBrightnessTarget;
             // Guard per-channel gamma against invalid/unstable values from persisted config.
-            float gammaRed = ClampF((float)_config.AmbilightGammaRed, 0.1f, 5.0f);
-            float gammaGreen = ClampF((float)_config.AmbilightGammaGreen, 0.1f, 5.0f);
-            float gammaBlue = ClampF((float)_config.AmbilightGammaBlue, 0.1f, 5.0f);
-            float redBoost = (float)_config.AmbilightRedBoost;
-            float greenBoost = (float)_config.AmbilightGreenBoost;
-            float blueBoost = (float)_config.AmbilightBlueBoost;
-            float minLedBrightness = (float)_config.AmbilightMinLedBrightness;
+            float gammaRed = ClampF((float)cfg.AmbilightGammaRed, 0.1f, 5.0f);
+            float gammaGreen = ClampF((float)cfg.AmbilightGammaGreen, 0.1f, 5.0f);
+            float gammaBlue = ClampF((float)cfg.AmbilightGammaBlue, 0.1f, 5.0f);
+            float redBoost = (float)cfg.AmbilightRedBoost;
+            float greenBoost = (float)cfg.AmbilightGreenBoost;
+            float blueBoost = (float)cfg.AmbilightBlueBoost;
+            float minLedBrightness = (float)cfg.AmbilightMinLedBrightness;
             int inputPosition = mapping.InputPosition;
 
             int rotLeds = totalTgt > 0 ? Math.Abs(inputPosition) % totalTgt : 0;
@@ -310,7 +312,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                     _loadingEffectCts.Cancel();
                     _loadingEffectCts.Dispose();
                     _loadingEffectCts = null;
-                    if (_config.Debug)
+                    if (Config.Debug)
                     {
                         _logger.LogInformation("[Ambilight] Stopped loading effect, starting ambilight broadcast");
                     }
@@ -345,7 +347,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                     startFrame = frameIndex;
                     startInstant = DateTime.UtcNow;
                     elapsedBase = TimeSpan.Zero;
-                    if (_config.Debug)
+                    if (Config.Debug)
                     {
                         _logger.LogInformation("[Ambilight] Seek to {Seconds:F3}s → frame {Frame}", seekSec.Value, frameIndex);
                     }
@@ -360,7 +362,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                     // Pause: freeze the current ambilight frame and stop advancing time.
                     // We do NOT blank the LEDs here so the last video frame stays visible.
                     elapsedBase += DateTime.UtcNow - startInstant;
-                    if (_config.Debug)
+                    if (Config.Debug)
                     {
                         _logger.LogInformation("[Ambilight] Pause detected – holding current frame");
                     }
@@ -372,7 +374,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                 if (!pausedNow && lastPaused)
                 {
                     startInstant = DateTime.UtcNow;
-                    if (_config.Debug)
+                    if (Config.Debug)
                     {
                         _logger.LogInformation("[Ambilight] Resume detected – resuming broadcast");
                     }
@@ -551,13 +553,6 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                     outFrame[@base + 1] = (byte)Math.Clamp((int)Math.Round(gOut), 0, 255);
                     outFrame[@base + 2] = (byte)Math.Clamp((int)Math.Round(bOut), 0, 255);
 
-                    if (bytesPerLed == 4)
-                    {
-                        int srcWIdx = srcIdx * bytesPerLed + 3;
-                        float wVal = raw[srcWIdx];
-                        acc[@base + 3] = acc[@base + 3] * (1.0f - k) + wVal * k;
-                        outFrame[@base + 3] = (byte)Math.Clamp((int)Math.Round(acc[@base + 3]), 0, 255);
-                    }
                 }
 
                 byte[] frameToSend = outFrame;
@@ -570,7 +565,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                 {
                     await udp.SendAsync(frameToSend, frameToSend.Length).ConfigureAwait(false);
                     lastFrameToSend = frameToSend;
-                    if (_config.Debug && frameIndex > 0 && frameIndex % 100 == 0)
+                    if (Config.Debug && frameIndex > 0 && frameIndex % 100 == 0)
                     {
                         _logger.LogInformation("[Ambilight] Broadcast: frame {FrameIndex}/{TotalFrames}", frameIndex, frames.Count);
                     }

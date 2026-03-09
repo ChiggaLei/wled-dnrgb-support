@@ -20,6 +20,18 @@
     let statusCheckInterval = null;
     let buttonCheckInterval = null;
 
+    function notify(message) {
+        if (typeof require === 'function') {
+            try {
+                require(['toast'], function(toast) { toast(message); });
+                return;
+            } catch (e) {
+                // Fall through to console.
+            }
+        }
+        console.log('[Ambilight]', message);
+    }
+
     /**
      * Check if ambilight data exists for the current item
      */
@@ -99,7 +111,7 @@
             if (response.ok) {
                 const result = await response.json();
                 console.log('[Ambilight] Extract result:', result);
-                alert(result.Message || 'Extraction started in background');
+                notify(result.Message || 'Extraction started in background');
 
                 // Start polling for completion
                 startStatusPolling(itemId);
@@ -111,7 +123,7 @@
                 Dashboard.hideLoadingMsg();
             }
             console.error('[Ambilight] Error triggering extraction:', error);
-            alert('Failed to start extraction: ' + error.message);
+            notify('Failed to start extraction: ' + error.message);
         }
     }
 
@@ -134,9 +146,7 @@
                 clearInterval(statusCheckInterval);
                 statusCheckInterval = null;
 
-                require(['toast'], function(toast) {
-                    toast('Ambilight extraction completed!');
-                });
+                notify('Ambilight extraction completed!');
 
                 // Refresh the button
                 addAmbilightButton(itemId);

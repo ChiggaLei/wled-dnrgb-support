@@ -38,6 +38,19 @@ public sealed class AmbilightInProcessExtractor
         _ffmpegPath = ResolveFfmpegPath();
     }
 
+    private PluginConfiguration Config => Plugin.Instance?.Configuration ?? _config;
+
+    public (int top, int right, int bottom, int left, string hardwareAcceleration) GetRuntimeExtractionSettings()
+    {
+        var cfg = Config;
+        return (
+            Math.Max(0, cfg.AmbilightTopLedCount),
+            Math.Max(0, cfg.AmbilightRightLedCount),
+            Math.Max(0, cfg.AmbilightBottomLedCount),
+            Math.Max(0, cfg.AmbilightLeftLedCount),
+            cfg.HardwareAcceleration ?? "auto");
+    }
+
     private string ResolveFfmpegPath()
     {
         // 1) Try ffmpeg from PATH – this covers most native installs and some containers.
@@ -166,7 +179,7 @@ public sealed class AmbilightInProcessExtractor
 
     private string BuildFfmpegArguments(string videoPath)
     {
-        var hwaccel = _config.HardwareAcceleration ?? "auto";
+        var hwaccel = Config.HardwareAcceleration ?? "auto";
         var baseArgs = "-hide_banner -loglevel error";
         
         // Hardware acceleration options
@@ -253,25 +266,24 @@ public sealed class AmbilightInProcessExtractor
 
         try
         {
+            var cfg = Config;
             // Probe video to get actual FPS and duration
             float fps = await ProbeVideoFps(videoPath, cancellationToken).ConfigureAwait(false);
             float duration = await ProbeVideoDuration(videoPath, cancellationToken).ConfigureAwait(false);
             ulong estimatedFrames = (ulong)(duration * fps);
             
-            if (_config.Debug)
+            if (cfg.Debug)
             {
                 _logger.LogInformation("[Ambilight] Extractor: video FPS: {Fps:F3}, duration: {Duration:F1}s, estimated frames: {Frames}", fps, duration, estimatedFrames);
             }
 
             // Prepare header values
-            ushort topCount = (ushort)Math.Max(0, _config.AmbilightTopLedCount);
-            ushort bottomCount = (ushort)Math.Max(0, _config.AmbilightBottomLedCount);
-            ushort leftCount = (ushort)Math.Max(0, _config.AmbilightLeftLedCount);
-            ushort rightCount = (ushort)Math.Max(0, _config.AmbilightRightLedCount);
-            bool rgbw = _config.AmbilightRgbw;
-            byte fmt = rgbw ? (byte)1 : (byte)0;
-
-            int bytesPerLed = rgbw ? 4 : 3;
+            ushort topCount = (ushort)Math.Max(0, cfg.AmbilightTopLedCount);
+            ushort bottomCount = (ushort)Math.Max(0, cfg.AmbilightBottomLedCount);
+            ushort leftCount = (ushort)Math.Max(0, cfg.AmbilightLeftLedCount);
+            ushort rightCount = (ushort)Math.Max(0, cfg.AmbilightRightLedCount);
+            byte fmt = 0; // RGB only
+            int bytesPerLed = 3;
             var zones = ComputeLedZones(ExtractWidth, ExtractHeight, topCount, bottomCount, leftCount, rightCount);
             int ledsPerFrame = zones.Count;
             if (ledsPerFrame == 0)
@@ -302,7 +314,7 @@ public sealed class AmbilightInProcessExtractor
             
             try
             {
-                if (_config.Debug)
+                if (cfg.Debug)
                 {
                     _logger.LogInformation("[Ambilight] Extractor: starting ffmpeg for {Path}", videoPath);
                     _logger.LogInformation("[Ambilight] Extractor: ffmpeg args: {Args}", ffmpegArgs);
@@ -363,7 +375,7 @@ public sealed class AmbilightInProcessExtractor
                 writer.Write(tsUs);
 
                 // Compute colors for each zone
-                ComputeFrameColors(frameBuffer, ExtractWidth, ExtractHeight, zoning, rgbw, zoneColors);
+                ComputeFrameColors(frameBuffer, ExtractWidth, ExtractHeight, zoning, zoneColors);
                 writer.Write(zoneColors);
 
                 frameIndex++;
@@ -374,7 +386,7 @@ public sealed class AmbilightInProcessExtractor
                     progress.Report((frameIndex, estimatedFrames));
                 }
                 
-                if (_config.Debug && frameIndex % 200 == 0)
+                if (cfg.Debug && frameIndex % 200 == 0)
                 {
                     _logger.LogInformation("[Ambilight] Extractor: processed {Frames} frames for {Path}", frameIndex, videoPath);
                 }
@@ -444,11 +456,11 @@ public sealed class AmbilightInProcessExtractor
                 // ignore size errors
             }
 
-            if (_config.Debug)
+            if (cfg.Debug)
             {
                 _logger.LogInformation("[Ambilight] Extractor: wrote AMb2 file {Output} with {Frames} frames", outputPath, frameIndex);
             }
-            if (_config.Debug)
+            if (cfg.Debug)
             {
                 _logger.LogInformation("[Ambilight] Extractor: final file {Output} size {SizeBytes} bytes (~{SizeMb:F2} MB)",
                     outputPath,
@@ -528,10 +540,9 @@ public sealed class AmbilightInProcessExtractor
         int width,
         int height,
         (int x1, int y1, int x2, int y2)[] zones,
-        bool rgbw,
         byte[] output)
     {
-        int bytesPerLed = rgbw ? 4 : 3;
+        const int bytesPerLed = 3;
 
         for (int i = 0; i < zones.Length; i++)
         {
@@ -547,32 +558,16 @@ public sealed class AmbilightInProcessExtractor
                 output[baseIdx] = 0;
                 output[baseIdx + 1] = 0;
                 output[baseIdx + 2] = 0;
-                if (rgbw) output[baseIdx + 3] = 0;
                 continue;
             }
 
             // Extract edge-dominant color (matching Rust implementation)
             var (rOut, gOut, bOut) = ExtractEdgeDominantColor(frame, width, height, x1, y1, x2, y2);
-            byte wOut = 0;
-
-            if (rgbw)
-            {
-                // Same logic as Rust: extract white component as min(r,g,b).
-                byte wComp = Math.Min(rOut, Math.Min(gOut, bOut));
-                rOut = (byte)(rOut - wComp);
-                gOut = (byte)(gOut - wComp);
-                bOut = (byte)(bOut - wComp);
-                wOut = wComp;
-            }
 
             int outBase = i * bytesPerLed;
             output[outBase] = rOut;
             output[outBase + 1] = gOut;
             output[outBase + 2] = bOut;
-            if (rgbw)
-            {
-                output[outBase + 3] = wOut;
-            }
         }
     }
 

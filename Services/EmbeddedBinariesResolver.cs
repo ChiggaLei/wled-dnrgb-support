@@ -41,15 +41,17 @@ public class EmbeddedBinariesResolver
         _logger = logger;
     }
 
+    private PluginConfiguration Config => Plugin.Instance?.Configuration ?? _config;
+
     /// <summary>
     /// Gets the path to use for the extractor. If config has RustExtractorPath, uses that.
     /// Otherwise tries to use an embedded binary for the current platform.
     /// </summary>
     public string GetExtractorPath()
     {
-        if (!string.IsNullOrWhiteSpace(_config.RustExtractorPath))
+        if (!string.IsNullOrWhiteSpace(Config.RustExtractorPath))
         {
-            return _config.RustExtractorPath!;
+            return Config.RustExtractorPath!;
         }
 
         if (_resolvedExtractorPath != null)

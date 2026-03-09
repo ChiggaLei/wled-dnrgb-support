@@ -2,6 +2,12 @@
 
 All notable changes to the Jellyfin Ambilight Plugin will be documented in this file.
 
+## [1.7.0] - 2026-03-07
+
+### Changed
+- **RGB-only extraction pipeline** - Removed the RGBW extraction configuration option and all RGBW extraction/runtime paths so AMb2 generation and playback consistently use RGB (3 channels).
+- **Configuration and docs cleanup** - Removed RGBW references from settings/docs and clarified `Input Position` ordering from the viewer perspective (`0` top-left, then clockwise).
+
 ## [1.6.4] - 2026-03-07
 
 ### Fixed
@@ -42,7 +48,6 @@ All notable changes to the Jellyfin Ambilight Plugin will be documented in this 
 - **Real-time playback synchronization** - Pause, resume, and seek support
 - **Loading and failure effects** - Visual feedback when starting playback or on errors
 - **Configurable visual tuning** - Gamma, saturation, brightness, color boosts, and smoothing
-- **RGBW support** - Full support for RGBW LED strips
 - **AMb2 binary format** - Efficient compressed format for ambilight data
 
 ### Technical Details

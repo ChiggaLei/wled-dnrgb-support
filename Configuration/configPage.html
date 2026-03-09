@@ -107,14 +107,6 @@ the Free Software Foundation, either version 3 of the License, or
                         </div>
                     </div>
 
-                    <div class="checkboxContainer checkboxContainer-withDescription">
-                        <label class="emby-checkbox-label">
-                            <input id="AmbilightRgbw" type="checkbox" is="emby-checkbox" />
-                            <span>Use RGBW format for extraction</span>
-                        </label>
-                        <div class="fieldDescription">Enable if your WLED controllers use RGBW (4-channel) LEDs instead of RGB (3-channel). This determines the format used when extracting ambilight data.</div>
-                    </div>
-
                     <div class="inputContainer" style="margin-top: 1.5em;">
                         <label class="inputLabel inputLabelUnfocused" for="AmbilightDataFolder">Ambilight data folder</label>
                         <div style="display: flex; gap: 0.5em; align-items: center;">
@@ -350,7 +342,6 @@ the Free Software Foundation, either version 3 of the License, or
                         document.querySelector('#AmbilightBottomLedCount').value = config.AmbilightBottomLedCount;
                         document.querySelector('#AmbilightLeftLedCount').value = config.AmbilightLeftLedCount;
                         document.querySelector('#AmbilightRightLedCount').value = config.AmbilightRightLedCount;
-                        document.querySelector('#AmbilightRgbw').checked = config.AmbilightRgbw;
                         document.querySelector('#AmbilightGamma').value = config.AmbilightGamma;
                         document.querySelector('#AmbilightSaturation').value = config.AmbilightSaturation;
                         document.querySelector('#AmbilightBrightnessTarget').value = config.AmbilightBrightnessTarget;
@@ -390,7 +381,6 @@ the Free Software Foundation, either version 3 of the License, or
                     config.AmbilightBottomLedCount = document.querySelector('#AmbilightBottomLedCount').value;
                     config.AmbilightLeftLedCount = document.querySelector('#AmbilightLeftLedCount').value;
                     config.AmbilightRightLedCount = document.querySelector('#AmbilightRightLedCount').value;
-                    config.AmbilightRgbw = document.querySelector('#AmbilightRgbw').checked;
                     config.AmbilightGamma = document.querySelector('#AmbilightGamma').value;
                     config.AmbilightSaturation = document.querySelector('#AmbilightSaturation').value;
                     config.AmbilightBrightnessTarget = document.querySelector('#AmbilightBrightnessTarget').value;
@@ -536,8 +526,8 @@ the Free Software Foundation, either version 3 of the License, or
                 });
             })();
 
-            // ===== MANAGER TAB LOGIC ===== v1.6.4 - Scheduled Task Integration
-            console.log('[Ambilight] Config v1.6.4 - Scheduled Task Integration');
+            // ===== MANAGER TAB LOGIC ===== v1.7.0 - RGB-only extraction
+            console.log('[Ambilight] Config v1.7.0 - RGB-only extraction');
             
             let allVideos = [];
             let currentFilter = '';
@@ -555,10 +545,10 @@ the Free Software Foundation, either version 3 of the License, or
                     try {
                         require(['toast'], function(toast) { toast(msg); });
                     } catch (e) {
-                        if (typeof alert !== 'undefined') alert(msg); else console.log(msg);
+                        console.log('[Ambilight] ' + msg);
                     }
                 } else {
-                    if (typeof alert !== 'undefined') alert(msg); else console.log(msg);
+                    console.log('[Ambilight] ' + msg);
                 }
             }
 
