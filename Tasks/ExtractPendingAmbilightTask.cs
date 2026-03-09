@@ -40,6 +40,8 @@ public class ExtractPendingAmbilightTask : IScheduledTask
         _config = Plugin.Instance?.Configuration ?? new PluginConfiguration();
     }
 
+    private PluginConfiguration Config => Plugin.Instance?.Configuration ?? _config;
+
     public string Name => "Extract Pending Ambilight Data";
 
     public string Key => "ExtractPendingAmbilight";
@@ -60,9 +62,9 @@ public class ExtractPendingAmbilightTask : IScheduledTask
             var extractorLogger = loggerFactory.CreateLogger<AmbilightExtractorService>();
             var extractorCoreLogger = loggerFactory.CreateLogger<AmbilightInProcessExtractor>();
 
-            _storage = new AmbilightStorageService(storageLogger, _config);
-            var extractorCore = new AmbilightInProcessExtractor(extractorCoreLogger, _config);
-            _extractor = new AmbilightExtractorService(extractorLogger, _libraryManager, _storage, _config, extractorCore);
+            _storage = new AmbilightStorageService(storageLogger, Config);
+            var extractorCore = new AmbilightInProcessExtractor(extractorCoreLogger, Config);
+            _extractor = new AmbilightExtractorService(extractorLogger, _libraryManager, _storage, Config, extractorCore);
         }
 
         // Get all items needing extraction

@@ -49,6 +49,18 @@ public class AmbilightExtractorService
         _extractorCore = extractorCore;
     }
 
+    private PluginConfiguration Config => Plugin.Instance?.Configuration ?? _config;
+
+    private void PopulateExtractionMetadata(AmbilightItem item)
+    {
+        var (top, right, bottom, left, _) = _extractorCore.GetRuntimeExtractionSettings();
+        item.ExtractedByPluginVersion = AmbilightStorageService.GetCurrentPluginVersion();
+        item.ExtractionTopLedCount = top;
+        item.ExtractionRightLedCount = right;
+        item.ExtractionBottomLedCount = bottom;
+        item.ExtractionLeftLedCount = left;
+    }
+
     /// <summary>
     /// Enumerate items from Jellyfin and sync them into AmbilightStorage.
     /// This mirrors perform_incremental_library_update in the Python daemon,
@@ -58,7 +70,7 @@ public class AmbilightExtractorService
     {
         _logger.LogInformation("[Ambilight] Syncing library items from Jellyfin...");
 
-        var excluded = _config.ExcludedLibraryIds ?? new List<string>();
+        var excluded = Config.ExcludedLibraryIds ?? new List<string>();
         var normalizedExcluded = excluded.Select(NormalizeLibraryId).ToHashSet();
 
         // Get all user views (libraries)
@@ -126,7 +138,7 @@ public class AmbilightExtractorService
     public IEnumerable<AmbilightItem> GetItemsNeedingExtraction()
     {
         var now = DateTimeOffset.UtcNow;
-        var excluded = _config.ExcludedLibraryIds ?? new List<string>();
+        var excluded = Config.ExcludedLibraryIds ?? new List<string>();
         var normalizedExcluded = excluded.Select(NormalizeLibraryId).ToHashSet();
 
         // Get all user views (libraries)
@@ -198,7 +210,7 @@ public class AmbilightExtractorService
         }
 
         // Sort according to extraction priority
-        var priority = _config.ExtractionPriority ?? "newest_first";
+        var priority = Config.ExtractionPriority ?? "newest_first";
         _logger.LogDebug("[Ambilight] Sorting {Count} pending items by priority: {Priority}", 
             pendingItems.Count, priority);
 
@@ -264,6 +276,7 @@ public class AmbilightExtractorService
             item.ExtractionProgress = 0;
             item.ExtractionFramesCurrent = 0;
             item.ExtractionFramesTotal = 0;
+            PopulateExtractionMetadata(item);
             _storage.SaveOrUpdateItem(item);
 
             // Create a progress callback that receives (currentFrame, totalFrames)
@@ -281,7 +294,7 @@ public class AmbilightExtractorService
             {
                 item.ExtractionStatus = "completed";
                 item.ExtractionError = null;
-                if (_config.Debug)
+                if (Config.Debug)
                 {
                     _logger.LogInformation("[Ambilight] Extraction completed for {ItemName}", item.Name);
                 }
@@ -301,7 +314,7 @@ public class AmbilightExtractorService
             item.ExtractionProgress = 0;
             item.ExtractionFramesCurrent = 0;
             item.ExtractionFramesTotal = 0;
-            if (_config.Debug)
+            if (Config.Debug)
             {
                 _logger.LogInformation("[Ambilight] Extraction cancelled for {ItemName}", item.Name);
             }

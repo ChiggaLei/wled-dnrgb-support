@@ -1,6 +1,6 @@
 # Jellyfin Ambilight Plugin
 
-**Version:** 1.6.4
+**Version:** 1.7.0
 
 Transform your Jellyfin viewing experience with synchronized ambient lighting! This plugin automatically creates immersive ambilight effects for your movies and TV shows by controlling WLED-compatible LED strips.
 
@@ -105,7 +105,6 @@ Controls how and when the plugin processes videos:
 **Extraction LED Configuration:**
 
 - **Top/Bottom/Left/Right LED counts** - Default LED strip layout used when creating binary files (default: 89/89/49/49)
-- **Use RGBW format for extraction** - Enable if your WLED controllers use RGBW (4-channel) LEDs instead of RGB (3-channel)
 - **Ambilight data folder** - Where to store extracted `.bin` files (default: `/data/ambilight`)
 
 The extracted data can be automatically scaled to match different LED layouts during playback (configured per device mapping below).
@@ -121,7 +120,10 @@ Configure which Jellyfin devices should trigger ambilight effects and where to s
 4. **Set port** - Default: `19446` (WLED's standard UDP port)
 5. **Configure LED layout** for this specific WLED instance:
    - **Top/Bottom/Left/Right LED counts** - Number of LEDs on each edge of your screen
-   - **Input Position** - Starting position in your LED strip (first LED index, typically 0)
+   - **Input Position** - Starting index of your LED strip in clockwise order from the viewer perspective:
+     - `0` = top-left LED
+     - `1` = next LED to the right
+     - continue clockwise around the screen
 6. **Save** - Click the Save button at the bottom
 7. **Repeat** - Add more mappings as needed
 
