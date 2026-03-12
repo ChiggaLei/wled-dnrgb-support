@@ -1178,7 +1178,7 @@ the Free Software Foundation, either version 3 of the License, or
                         var seriesStatsHtml = '<span style="font-weight: normal; font-size: 0.9em; opacity: 0.8;"> (' + seasonKeys.length + ' seasons, ' + allEpisodes.length + ' episodes: ' + seriesExtractedCount + ' extracted, ' + seriesPendingCount + ' pending' + (seriesFailedCount > 0 ? ', ' + seriesFailedCount + ' failed' : '') + ')</span>';
                         var extractPendingBtnHtml = '';
                         if (seriesPendingCount > 0) {
-                            extractPendingBtnHtml = '<button is="emby-button" class="emby-button raised btnExtractPending" data-scope="series" data-id="' + seriesId + '" style="margin-left: 10px; padding: 0.2em 0.5em; font-size: 0.8em; z-index: 10; float: right;">Extract Pending</button>';
+                            extractPendingBtnHtml = '<button is="emby-button" class="emby-button raised btnExtractPending" data-scope="series" data-id="' + seriesId + '" style="margin-left: 10px; padding: 0.2em 0.5em; font-size: 0.8em; z-index: 10; float: right;">Extract all pending</button>';
                         }
                         
                         seriesRow.innerHTML = '<td colspan="5"><span class="material-icons" style="vertical-align: middle; font-size: 1.2em;">' + seriesExpandIcon + '</span> ' + 
@@ -1234,7 +1234,7 @@ the Free Software Foundation, either version 3 of the License, or
                             var seasonStatsHtml = '<span style="font-weight: normal; font-size: 0.9em; opacity: 0.8;"> (' + episodes.length + ' episodes: ' + extractedCount + ' extracted, ' + pendingCount + ' pending' + (failedCount > 0 ? ', ' + failedCount + ' failed' : '') + ')</span>';
                             var seasonExtractPendingBtnHtml = '';
                             if (pendingCount > 0) {
-                                seasonExtractPendingBtnHtml = '<button is="emby-button" class="emby-button raised btnExtractPending" data-scope="season" data-id="' + seasonId + '" style="margin-left: 10px; padding: 0.2em 0.5em; font-size: 0.8em; z-index: 10; float: right;">Extract Pending</button>';
+                                seasonExtractPendingBtnHtml = '<button is="emby-button" class="emby-button raised btnExtractPending" data-scope="season" data-id="' + seasonId + '" style="margin-left: 10px; padding: 0.2em 0.5em; font-size: 0.8em; z-index: 10; float: right;">Extract Season ' + seasonNumber + ' pending</button>';
                             }
                             
                             seasonRow.innerHTML = '<td colspan="5"><span style="padding-left: 1.5em;"><span class="material-icons" style="vertical-align: middle; font-size: 1.2em;">' + seasonExpandIcon + '</span> ' + 
@@ -1429,10 +1429,7 @@ the Free Software Foundation, either version 3 of the License, or
                         metaParts.push(se);
                     }
                 } else if (videoIsEpisode && isEpisode) {
-                    // For grouped episodes, show just episode number
-                    if (episodeNumber != null) {
-                        metaParts.push('Episode ' + episodeNumber);
-                    }
+                    // For grouped episodes, don't add episode number to metaParts as it's already in metaCellHtml
                 } else if (typeLabel && !videoIsEpisode) {
                     metaParts.push(typeLabel);
                 }
