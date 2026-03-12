@@ -76,6 +76,8 @@ public class AmbilightEntryPoint : IHostedService
         var extractorCoreLogger = loggerFactory.CreateLogger<AmbilightInProcessExtractor>();
 
         _storage = new AmbilightStorageService(storageLogger, _config);
+        _storage.CleanupStuckExtractions();
+        
         var extractorCore = new AmbilightInProcessExtractor(extractorCoreLogger, _config);
         _extractor = new AmbilightExtractorService(extractorLogger, _libraryManager, _storage, _config, extractorCore);
         _playback = new AmbilightPlaybackService(playbackLogger, _sessionManager, _libraryManager, _storage, _config);
@@ -171,6 +173,15 @@ public class AmbilightEntryPoint : IHostedService
         {
             _logger.LogError(ex, "[Ambilight] Error during manual extraction for {ItemName}", item.Name);
         }
+    }
+
+    /// <summary>
+    /// Cancels extraction for a specific item.
+    /// </summary>
+    public bool CancelExtraction(string itemId)
+    {
+        if (_extractor == null) return false;
+        return _extractor.CancelExtraction(itemId);
     }
 
     private void OnItemAdded(object? sender, ItemChangeEventArgs e)

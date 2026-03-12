@@ -220,6 +220,32 @@ public class AmbilightStorageService
             FailedVideos = failed
         };
     }
+
+    /// <summary>
+    /// Resets items that were extracting/queued on previous shutdown back to pending.
+    /// </summary>
+    public void CleanupStuckExtractions()
+    {
+        var count = 0;
+        foreach (var item in EnumerateItems())
+        {
+            if (item.ExtractionStatus == "extracting" || item.ExtractionStatus == "queued")
+            {
+                item.ExtractionStatus = "pending";
+                item.ExtractionProgress = 0;
+                item.ExtractionFramesCurrent = 0;
+                item.ExtractionFramesTotal = 0;
+                SaveOrUpdateItem(item);
+                ClearExtractionProgress(item.Id);
+                count++;
+            }
+        }
+
+        if (count > 0)
+        {
+            _logger.LogInformation("[Ambilight] Cleaned up {Count} stuck extractions on startup.", count);
+        }
+    }
 }
 
 public class AmbilightItem

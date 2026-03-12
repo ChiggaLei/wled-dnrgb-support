@@ -19,6 +19,7 @@ namespace Jellyfin.Plugin.Ambilight
         // Extraction
         public string ExtractionPriority { get; set; } = "newest_first";
         public bool ExtractNewlyAddedItems { get; set; } = true;
+        public int MaxConcurrentExtractions { get; set; } = 1;
         public string HardwareAcceleration { get; set; } = "auto"; // "auto", "none", "vaapi", "qsv", "cuda", "videotoolbox"
         
         // WLED Device Mappings
