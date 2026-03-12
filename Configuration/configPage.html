@@ -61,6 +61,12 @@ the Free Software Foundation, either version 3 of the License, or
                         <div class="fieldDescription">Order in which pending videos are extracted.</div>
                     </div>
 
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="MaxConcurrentExtractions">Max concurrent extractions</label>
+                        <input id="MaxConcurrentExtractions" type="number" is="emby-input" min="1" max="10" />
+                        <div class="fieldDescription">Number of videos to extract simultaneously. Increase for faster extraction on powerful CPUs. Default is 1.</div>
+                    </div>
+
                     <div class="selectContainer">
                         <label class="selectLabel">Excluded libraries</label>
                         <div id="ExcludedLibraries" style="margin-top: 0.5em; margin-bottom: 0.5em;">
@@ -332,6 +338,7 @@ the Free Software Foundation, either version 3 of the License, or
                         AmbilightConfig.currentConfig = config;
                         document.querySelector('#ExtractNewlyAddedItems').checked = config.ExtractNewlyAddedItems !== false;
                         document.querySelector('#ExtractionPriority').value = config.ExtractionPriority || 'newest_first';
+                        document.querySelector('#MaxConcurrentExtractions').value = config.MaxConcurrentExtractions || 1;
                         document.querySelector('#HardwareAcceleration').value = config.HardwareAcceleration || 'auto';
                         document.querySelector('#AmbilightDataFolder').value = config.AmbilightDataFolder || '/data/ambilight';
                         document.querySelector('#AmbilightSmoothSeconds').value = (config.AmbilightSmoothSeconds != null ? config.AmbilightSmoothSeconds : 0.12);
@@ -371,6 +378,7 @@ the Free Software Foundation, either version 3 of the License, or
                 ApiClient.getPluginConfiguration(AmbilightConfig.pluginUniqueId).then(function (config) {
                     config.ExtractNewlyAddedItems = document.querySelector('#ExtractNewlyAddedItems').checked;
                     config.ExtractionPriority = document.querySelector('#ExtractionPriority').value;
+                    config.MaxConcurrentExtractions = parseInt(document.querySelector('#MaxConcurrentExtractions').value) || 1;
                     config.HardwareAcceleration = document.querySelector('#HardwareAcceleration').value || 'auto';
                     config.AmbilightDataFolder = document.querySelector('#AmbilightDataFolder').value || '/data/ambilight';
                     config.AmbilightSmoothSeconds = parseFloat(document.querySelector('#AmbilightSmoothSeconds').value || '0.12');
@@ -1168,9 +1176,13 @@ the Free Software Foundation, either version 3 of the License, or
                         var seriesExpandIcon = isSeriesCollapsed ? 'chevron_right' : 'expand_more';
                         var seriesStatusHtml = '<span class="material-icons" style="color:' + seriesStatusColor + ';vertical-align:middle;font-size:1.1em;margin-left:0.5em;">' + seriesStatusIcon + '</span><span style="color:' + seriesStatusColor + ';margin-left:0.3em;font-weight:normal;font-size:0.95em;">' + seriesStatusText + '</span>';
                         var seriesStatsHtml = '<span style="font-weight: normal; font-size: 0.9em; opacity: 0.8;"> (' + seasonKeys.length + ' seasons, ' + allEpisodes.length + ' episodes: ' + seriesExtractedCount + ' extracted, ' + seriesPendingCount + ' pending' + (seriesFailedCount > 0 ? ', ' + seriesFailedCount + ' failed' : '') + ')</span>';
+                        var extractPendingBtnHtml = '';
+                        if (seriesPendingCount > 0) {
+                            extractPendingBtnHtml = '<button is="emby-button" class="emby-button raised btnExtractPending" data-scope="series" data-id="' + seriesId + '" style="margin-left: 10px; padding: 0.2em 0.5em; font-size: 0.8em; z-index: 10; float: right;">Extract Pending</button>';
+                        }
                         
                         seriesRow.innerHTML = '<td colspan="5"><span class="material-icons" style="vertical-align: middle; font-size: 1.2em;">' + seriesExpandIcon + '</span> ' + 
-                            escapeHtml(series.name) + seriesStatusHtml + seriesStatsHtml + '</td>';
+                            escapeHtml(series.name) + seriesStatusHtml + seriesStatsHtml + extractPendingBtnHtml + '</td>';
                         seriesRow.setAttribute('data-series-id', seriesCollapsedId);
                         seriesRow.setAttribute('data-collapsed', isSeriesCollapsed ? 'true' : 'false');
                         
@@ -1220,9 +1232,13 @@ the Free Software Foundation, either version 3 of the License, or
                             var seasonExpandIcon = isSeasonCollapsed ? 'chevron_right' : 'expand_more';
                             var seasonStatusHtml = '<span class="material-icons" style="color:' + seasonStatusColor + ';vertical-align:middle;font-size:1em;margin-left:0.5em;">' + seasonStatusIcon + '</span><span style="color:' + seasonStatusColor + ';margin-left:0.3em;font-weight:normal;font-size:0.9em;">' + seasonStatusText + '</span>';
                             var seasonStatsHtml = '<span style="font-weight: normal; font-size: 0.9em; opacity: 0.8;"> (' + episodes.length + ' episodes: ' + extractedCount + ' extracted, ' + pendingCount + ' pending' + (failedCount > 0 ? ', ' + failedCount + ' failed' : '') + ')</span>';
+                            var seasonExtractPendingBtnHtml = '';
+                            if (pendingCount > 0) {
+                                seasonExtractPendingBtnHtml = '<button is="emby-button" class="emby-button raised btnExtractPending" data-scope="season" data-id="' + seasonId + '" style="margin-left: 10px; padding: 0.2em 0.5em; font-size: 0.8em; z-index: 10; float: right;">Extract Pending</button>';
+                            }
                             
                             seasonRow.innerHTML = '<td colspan="5"><span style="padding-left: 1.5em;"><span class="material-icons" style="vertical-align: middle; font-size: 1.2em;">' + seasonExpandIcon + '</span> ' + 
-                                seasonName + seasonStatusHtml + seasonStatsHtml + '</span></td>';
+                                seasonName + seasonStatusHtml + seasonStatsHtml + '</span>' + seasonExtractPendingBtnHtml + '</td>';
                             seasonRow.setAttribute('data-season-id', seasonId);
                             seasonRow.setAttribute('data-collapsed', isSeasonCollapsed ? 'true' : 'false');
                             
@@ -1318,8 +1334,34 @@ the Free Software Foundation, either version 3 of the License, or
                         var mode = this.getAttribute('data-mode') || 'extract';
                         if (mode === 'delete') {
                             deleteBinary(itemId, itemName, this);
+                        } else if (mode === 'cancel') {
+                            cancelExtraction(itemId, itemName, this);
                         } else {
                             extractVideo(itemId, itemName, this);
+                        }
+                    });
+                });
+
+                // Add handlers for the Extract Pending buttons
+                document.querySelectorAll('.btnExtractPending').forEach(function(btn) {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation(); // Stop collapsing logic
+                        var scope = this.getAttribute('data-scope');
+                        var targetId = this.getAttribute('data-id');
+                        var extractButtons;
+                        
+                        if (scope === 'series') {
+                            extractButtons = document.querySelectorAll('tr[data-parent-series="' + targetId + '"] .btnExtractVideo[data-mode="extract"]');
+                        } else if (scope === 'season') {
+                            extractButtons = document.querySelectorAll('tr[data-parent-season="' + targetId + '"] .btnExtractVideo[data-mode="extract"]');
+                        }
+                        
+                        if (extractButtons) {
+                            extractButtons.forEach(function(ebtn) {
+                                var eItemId = ebtn.getAttribute('data-id');
+                                var eItemName = ebtn.getAttribute('data-name');
+                                extractVideo(eItemId, eItemName, ebtn);
+                            });
                         }
                     });
                 });
@@ -1366,7 +1408,7 @@ the Free Software Foundation, either version 3 of the License, or
                 var seriesName = video.SeriesName || '';
                 var seasonNumber = video.ParentIndexNumber != null ? video.ParentIndexNumber : video.SeasonIndexNumber;
                 var episodeNumber = video.IndexNumber;
-                var typeLabel = videoIsEpisode ? 'Episode' : (type || 'Movie');
+                var typeLabel = videoIsEpisode ? 'Episode' : '';
 
                 var metaParts = [];
                 if (videoIsEpisode && !isEpisode) {
@@ -1400,6 +1442,7 @@ the Free Software Foundation, either version 3 of the License, or
                 var isExtracted = !!(status && status.HasBinary);
                 var isFailed = !!(status && status.ExtractionStatus === 'failed');
                 var isExtracting = !!(status && status.ExtractionStatus === 'extracting');
+                var isQueued = !!(status && status.ExtractionStatus === 'queued');
                 var btnHtml = '';
 
                 if (isExtracting) {
@@ -1408,7 +1451,10 @@ the Free Software Foundation, either version 3 of the License, or
                     var framesTotal = status.ExtractionFramesTotal || 0;
                     var framesText = framesTotal > 0 ? framesCurrent.toLocaleString() + ' / ' + framesTotal.toLocaleString() : 'Starting...';
                     statusHtml = '<span class="material-icons" style="color:#3b82f6;vertical-align:middle;font-size:1.2em;animation:spin 2s linear infinite;">sync</span> Extracting (' + framesText + ')';
-                    btnHtml = '<button is="emby-button" class="emby-button raised btnExtractVideo" disabled>Extracting...</button>';
+                    btnHtml = '<button data-mode="cancel" data-id="' + escapeHtml(videoId) + '" data-name="' + escapeHtml(videoName) + '" is="emby-button" class="emby-button raised button-cancel btnExtractVideo">Stop</button>';
+                } else if (isQueued) {
+                    statusHtml = '<span class="material-icons" style="color:#a855f7;vertical-align:middle;font-size:1.2em;">schedule</span> Queued';
+                    btnHtml = '<button data-mode="cancel" data-id="' + escapeHtml(videoId) + '" data-name="' + escapeHtml(videoName) + '" is="emby-button" class="emby-button raised button-cancel btnExtractVideo">Stop</button>';
                 } else {
                     var btnClass = isExtracted
                         ? 'emby-button raised button-delete btnExtractVideo'
@@ -1418,14 +1464,28 @@ the Free Software Foundation, either version 3 of the License, or
                     btnHtml = '<button data-mode="' + btnMode + '" data-id="' + escapeHtml(videoId) + '" data-name="' + escapeHtml(videoName) + '" is="emby-button" class="' + btnClass + '">' + btnLabel + '</button>';
                 }
 
-                var titleCellHtml = escapeHtml(videoName);
-                if (metaText) {
-                    titleCellHtml += '<div class="fieldDescription">' + escapeHtml(metaText) + '</div>';
-                }
-
+                var titleCellHtml = '';
+                var metaCellHtml = '';
+                
                 // Indent episode titles if grouped (level 3, so indent more)
                 if (isEpisode) {
-                    titleCellHtml = '<span style="padding-left: 3em;">' + titleCellHtml + '</span>';
+                    if (episodeNumber != null) {
+                        metaCellHtml += '<span style="display:inline-block; width: 6em; font-weight: bold; color: #888; padding-left: 2em;">Episode ' + episodeNumber + '</span>';
+                    } else {
+                        metaCellHtml += '<span style="display:inline-block; width: 6em; padding-left: 2em;"></span>';
+                    }
+                    titleCellHtml = '<span style="display:inline-block;">' + escapeHtml(videoName) + '</span>';
+                    
+                    if (metaText) {
+                        titleCellHtml += '<div class="fieldDescription" style="margin-top: 2px;">' + escapeHtml(metaText) + '</div>';
+                    }
+                    
+                    titleCellHtml = metaCellHtml + titleCellHtml;
+                } else {
+                    titleCellHtml = escapeHtml(videoName);
+                    if (metaText) {
+                        titleCellHtml += '<div class="fieldDescription" style="margin-top: 2px;">' + escapeHtml(metaText) + '</div>';
+                    }
                 }
 
                 // Format added date
@@ -1462,11 +1522,13 @@ the Free Software Foundation, either version 3 of the License, or
                     }
                 }
 
-                row.innerHTML = '<td>' + titleCellHtml + '</td>' +
+                var trContent = '<td style="padding-top:1em;padding-bottom:1em;">' + titleCellHtml + '</td>' +
                     '<td>' + addedDateText + '</td>' +
                     '<td>' + statusHtml + '</td>' +
                     '<td>' + sizeText + '</td>' +
                     '<td>' + btnHtml + '</td>';
+
+                row.innerHTML = trContent;
 
                 return row;
             }
@@ -1474,7 +1536,7 @@ the Free Software Foundation, either version 3 of the License, or
             async function extractVideo(itemId, itemName, button) {
                 try {
                     button.disabled = true;
-                    button.textContent = 'Extracting...';
+                    button.textContent = 'Queuing...';
 
                     var extractUrl = '/Ambilight/Extract/' + itemId;
                     const response = await fetch(extractUrl, {
@@ -1489,7 +1551,7 @@ the Free Software Foundation, either version 3 of the License, or
                         var video = allVideos.find(function(v) { return v.Id === itemId; });
                         if (video) {
                             if (!video.ambilightStatus) video.ambilightStatus = {};
-                            video.ambilightStatus.ExtractionStatus = 'extracting';
+                            video.ambilightStatus.ExtractionStatus = 'queued';
                             video.ambilightStatus.ExtractionProgress = 0;
                             video.ambilightStatus.ExtractionFramesCurrent = 0;
                             video.ambilightStatus.ExtractionFramesTotal = 0;
@@ -1507,6 +1569,40 @@ the Free Software Foundation, either version 3 of the License, or
                     showToast('Failed to extract: ' + itemName);
                     button.disabled = false;
                     button.textContent = 'Extract';
+                }
+            }
+
+            async function cancelExtraction(itemId, itemName, button) {
+                try {
+                    button.disabled = true;
+                    button.textContent = 'Stopping...';
+
+                    var cancelUrl = '/Ambilight/Extract/' + itemId + '/Cancel';
+                    const response = await fetch(cancelUrl, {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+
+                    if (response.ok) {
+                        showToast('Extraction stopped for: ' + itemName);
+                        
+                        // Update status locally immediately
+                        var video = allVideos.find(function(v) { return v.Id === itemId; });
+                        if (video && video.ambilightStatus) {
+                            video.ambilightStatus.ExtractionStatus = 'pending';
+                        }
+                        delete extractingIds[itemId];
+                        
+                        // Refresh to clean up the UI
+                        setTimeout(function() { loadLibrary(); }, 1000);
+                    } else {
+                        throw new Error('Failed to cancel extraction');
+                    }
+                } catch (error) {
+                    console.error('Error canceling extraction:', error);
+                    showToast('Failed to stop extraction for: ' + itemName);
+                    button.disabled = false;
+                    button.textContent = 'Stop';
                 }
             }
 

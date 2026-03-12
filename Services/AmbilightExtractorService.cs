@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
@@ -33,7 +34,9 @@ public class AmbilightExtractorService
     private readonly AmbilightStorageService _storage;
     private readonly PluginConfiguration _config;
     private readonly AmbilightInProcessExtractor _extractorCore;
-    private readonly SemaphoreSlim _extractionLock = new(1, 1);
+    private readonly object _concurrencyLock = new object();
+    private int _activeExtractions = 0;
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _activeTokens = new();
 
     public AmbilightExtractorService(
         ILogger<AmbilightExtractorService> logger,
@@ -251,24 +254,50 @@ public class AmbilightExtractorService
     /// </summary>
     public async Task RunExtractorForItemAsync(AmbilightItem item, CancellationToken cancellationToken)
     {
-        var acquiredImmediately = await _extractionLock.WaitAsync(0, cancellationToken).ConfigureAwait(false);
-        if (!acquiredImmediately)
-        {
-            _logger.LogInformation("[Ambilight] Extraction already running; waiting turn for {ItemName}", item.Name);
-            await _extractionLock.WaitAsync(cancellationToken).ConfigureAwait(false);
-        }
-
-        var binPath = _storage.GetBinaryPath(item.Id);
+        var maxConcurrent = Config.MaxConcurrentExtractions > 0 ? Config.MaxConcurrentExtractions : 1;
+        var loggedWait = false;
+        var incrementedActive = false;
         
-        // Ensure data folder exists
-        var binDir = Path.GetDirectoryName(binPath);
-        if (!string.IsNullOrEmpty(binDir) && !Directory.Exists(binDir))
-        {
-            Directory.CreateDirectory(binDir);
-        }
-
+        // Link the provided token with our own token so we can cancel specific items
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _activeTokens[item.Id] = linkedCts;
+        
         try
         {
+            while (true)
+        {
+            linkedCts.Token.ThrowIfCancellationRequested();
+                lock (_concurrencyLock)
+                {
+                    if (_activeExtractions < maxConcurrent)
+                    {
+                        _activeExtractions++;
+                        incrementedActive = true;
+                        break;
+                    }
+                }
+            if (!loggedWait)
+            {
+                _logger.LogInformation("[Ambilight] Max concurrent {Max} reached; waiting turn for {ItemName}", maxConcurrent, item.Name);
+                
+                // Set status to queued
+                item.ExtractionStatus = "queued";
+                _storage.SaveOrUpdateItem(item);
+                
+                loggedWait = true;
+            }
+            await Task.Delay(1000, linkedCts.Token).ConfigureAwait(false);
+        }
+
+            var binPath = _storage.GetBinaryPath(item.Id);
+            
+            // Ensure data folder exists
+            var binDir = Path.GetDirectoryName(binPath);
+            if (!string.IsNullOrEmpty(binDir) && !Directory.Exists(binDir))
+            {
+                Directory.CreateDirectory(binDir);
+            }
+
             _logger.LogInformation("[Ambilight] Starting in-process extractor for {ItemName}", item.Name);
 
             // Set status to extracting
@@ -288,7 +317,7 @@ public class AmbilightExtractorService
                 _storage.UpdateExtractionProgress(item.Id, progress.current, progress.total);
             });
 
-            var ok = await _extractorCore.ExtractAsync(item.FilePath, binPath, cancellationToken, progressCallback).ConfigureAwait(false);
+            var ok = await _extractorCore.ExtractAsync(item.FilePath, binPath, linkedCts.Token, progressCallback).ConfigureAwait(false);
 
             if (ok && File.Exists(binPath))
             {
@@ -330,8 +359,29 @@ public class AmbilightExtractorService
         {
             item.ExtractionAttempts += 1;
             _storage.SaveOrUpdateItem(item);
-            _extractionLock.Release();
+            if (incrementedActive)
+            {
+                lock (_concurrencyLock)
+                {
+                    _activeExtractions--;
+                }
+            }
+            _activeTokens.TryRemove(item.Id, out _);
         }
+    }
+
+    /// <summary>
+    /// Cancels an actively extracting item.
+    /// </summary>
+    public bool CancelExtraction(string itemId)
+    {
+        if (_activeTokens.TryGetValue(itemId, out var cts))
+        {
+            _logger.LogInformation("[Ambilight] Cancelling extraction for item {ItemId}", itemId);
+            cts.Cancel();
+            return true;
+        }
+        return false;
     }
 
     /// <summary>

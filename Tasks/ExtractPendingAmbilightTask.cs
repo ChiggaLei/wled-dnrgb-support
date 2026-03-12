@@ -82,23 +82,23 @@ public class ExtractPendingAmbilightTask : IScheduledTask
         var total = pendingItems.Count;
         var completed = 0;
 
-        foreach (var item in pendingItems)
+        var maxConcurrent = Config.MaxConcurrentExtractions > 0 ? Config.MaxConcurrentExtractions : 1;
+        var parallelOptions = new ParallelOptions
         {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                _logger.LogInformation("[Ambilight] Extraction task cancelled by user");
-                break;
-            }
+            MaxDegreeOfParallelism = maxConcurrent,
+            CancellationToken = cancellationToken
+        };
 
+        await Parallel.ForEachAsync(pendingItems, parallelOptions, async (item, token) =>
+        {
             try
             {
-                _logger.LogInformation("[Ambilight] Extracting {Current}/{Total}: {ItemName}", 
-                    completed + 1, total, item.Name);
+                _logger.LogInformation("[Ambilight] Queueing extraction for: {ItemName}", item.Name);
 
-                await _extractor.RunExtractorForItemAsync(item, cancellationToken);
+                await _extractor.RunExtractorForItemAsync(item, token);
                 
-                completed++;
-                var progressPercent = (double)completed / total * 100.0;
+                var currentCompleted = Interlocked.Increment(ref completed);
+                var progressPercent = (double)currentCompleted / total * 100.0;
                 progress.Report(progressPercent);
             }
             catch (OperationCanceledException)
@@ -109,11 +109,11 @@ public class ExtractPendingAmbilightTask : IScheduledTask
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[Ambilight] Failed to extract {ItemName}, continuing with next item", item.Name);
-                completed++;
-                var progressPercent = (double)completed / total * 100.0;
+                var currentCompleted = Interlocked.Increment(ref completed);
+                var progressPercent = (double)currentCompleted / total * 100.0;
                 progress.Report(progressPercent);
             }
-        }
+        });
 
         _logger.LogInformation("[Ambilight] Extraction task completed: {Completed}/{Total} items processed", 
             completed, total);

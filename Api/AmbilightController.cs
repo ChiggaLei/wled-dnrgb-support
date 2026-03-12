@@ -388,6 +388,59 @@ public class AmbilightController : ControllerBase
     }
 
     /// <summary>
+    /// Cancels extraction for an actively extracting item.
+    /// </summary>
+    /// <param name="itemId">The item ID.</param>
+    /// <returns>Result.</returns>
+    [HttpPost("Extract/{itemId}/Cancel")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public ActionResult<AmbilightExtractResponse> CancelExtraction([FromRoute, Required] string itemId)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(itemId) || !Guid.TryParse(itemId, out var guid))
+            {
+                return BadRequest(new { error = "Invalid item ID", itemId });
+            }
+
+            var entryPoint = AmbilightEntryPoint.Instance;
+            if (entryPoint?.Storage == null)
+            {
+                return StatusCode(500, new { error = "Ambilight service not running" });
+            }
+
+            // Call cancel directly if we had the extractor from entryPoint, but it's private.
+            // Let's add a property to AmbilightEntryPoint to access the extractor service instead,
+            // or trigger an event. Wait, entryPoint has _extractor as private.
+            // Actually, we can add CancelExtraction on AmbilightEntryPoint.
+            var success = entryPoint.CancelExtraction(guid.ToString("N"));
+
+            if (success)
+            {
+                return Ok(new AmbilightExtractResponse
+                {
+                    ItemId = guid,
+                    Message = "Cancellation requested"
+                });
+            }
+            return NotFound(new AmbilightExtractResponse
+            {
+                ItemId = guid,
+                Message = "Item not currently extracting"
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { 
+                error = ex.Message,
+                type = ex.GetType().Name
+            });
+        }
+    }
+
+    /// <summary>
     /// Deletes the ambilight binary for a specific item so it can be re-extracted.
     /// </summary>
     /// <param name="itemId">The item ID.</param>
