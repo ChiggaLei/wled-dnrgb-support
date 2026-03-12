@@ -18,6 +18,14 @@
       },
       {
         "version": "1.7.0",
+        "changelog": "# Release Notes - v1.7.0\n\n## RGBW Removal And RGB-Only Pipeline\n\n- Removed the RGBW extraction configuration option from plugin settings.\n- Removed RGBW extraction and playback code paths from the runtime.\n- AMb2 generation and playback now use RGB (3-channel) only for consistent color behavior.\n\n## Documentation Update\n\n- Clarified `Input Position` mapping in README from viewer perspective:\n  - `0` is the top-left LED.\n  - `1` is the next LED to the right.\n  - Continue clockwise around the screen.\n\n## Runtime Configuration Reliability\n\n- Updated runtime services to always consume the latest plugin configuration without requiring a Jellyfin restart.\n- Device mappings, extraction queue settings, extraction LED counts, hardware acceleration, auto-extraction toggles, and playback tuning now refresh correctly from current saved config.\n\n## Extraction Metadata In Item JSON\n\n- Added extraction provenance fields in item metadata JSON files:\n  - Plugin version used to extract the binary.\n  - Extraction LED layout used for that extraction (`top`, `right`, `bottom`, `left`).\n- This improves traceability/control when validating existing binaries after config changes or upgrades.\n\n## Extraction Manager UX\n\n- Removed JavaScript alert popups for item-level extract/delete actions in favor of non-blocking feedback.\n\n## Installation & Upgrade\n\n- For installation and upgrade instructions, see `INSTALLATION.md`.\n- After upgrading:\n  1. Restart Jellyfin once to load plugin `1.7.0`.\n  2. Re-extract content that was previously generated with RGBW enabled.\n",
+        "targetAbi": "10.10.0.0",
+        "sourceUrl": "https://github.com/gabrielprat/jellyfin-ambilight/releases/download/v1.7.0/jellyfin-plugin-ambilight_1.7.0.zip",
+        "checksum": "3E2DA482CD9DCFDA46A71BD20F2299AC",
+        "timestamp": "2026-03-09T08:51:01Z"
+      },
+      {
+        "version": "1.7.0",
         "changelog": "# Release Notes - v1.7.0\n\n## RGBW Removal And RGB-Only Pipeline\n\n- Removed the RGBW extraction setting from plugin configuration.\n- Removed RGBW handling paths from extractor and player runtime.\n- AMb2 extraction and playback now run in RGB-only mode for consistent color behavior.\n\n## Documentation Update\n\n- Clarified `Input Position` mapping in README from viewer perspective:\n  - `0` = top-left LED\n  - `1` = next LED to the right\n  - continue clockwise around the screen.\n\n## Installation & Upgrade\n\n- For installation and upgrade instructions, see `INSTALLATION.md`.\n- After upgrading:\n  1. Restart Jellyfin once to load plugin `1.7.0`.\n  2. Re-extract items created with previous RGBW-enabled settings.\n",
         "targetAbi": "10.10.0.0",
         "sourceUrl": "https://github.com/gabrielprat/jellyfin-ambilight/releases/download/v1.7.0/jellyfin-plugin-ambilight_1.7.0.zip",
