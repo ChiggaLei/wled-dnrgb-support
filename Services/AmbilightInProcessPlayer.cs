@@ -170,7 +170,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
 
             if (cfg.Debug)
             {
-                _logger.LogInformation("[Ambilight] Playing {Path} → {Host}:{Port} (src {Src} LEDs → tgt {Tgt} LEDs)",
+                _logger.LogInformation("[Ambilight] Playing {Path} â†’ {Host}:{Port} (src {Src} LEDs â†’ tgt {Tgt} LEDs)",
                     binPath, mapping.Host, mapping.Port, totalSrc, totalTgt);
             }
 
@@ -349,11 +349,11 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                     elapsedBase = TimeSpan.Zero;
                     if (Config.Debug)
                     {
-                        _logger.LogInformation("[Ambilight] Seek to {Seconds:F3}s → frame {Frame}", seekSec.Value, frameIndex);
+                        _logger.LogInformation("[Ambilight] Seek to {Seconds:F3}s â†’ frame {Frame}", seekSec.Value, frameIndex);
                     }
                     else
                     {
-                        _logger.LogDebug("[Ambilight] In-process SEEK to {Seconds:F3}s → frame {Frame}", seekSec.Value, frameIndex);
+                        _logger.LogDebug("[Ambilight] In-process SEEK to {Seconds:F3}s â†’ frame {Frame}", seekSec.Value, frameIndex);
                     }
                 }
 
@@ -364,7 +364,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                     elapsedBase += DateTime.UtcNow - startInstant;
                     if (Config.Debug)
                     {
-                        _logger.LogInformation("[Ambilight] Pause detected – holding current frame");
+                        _logger.LogInformation("[Ambilight] Pause detected â€“ holding current frame");
                     }
                     else
                     {
@@ -376,7 +376,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                     startInstant = DateTime.UtcNow;
                     if (Config.Debug)
                     {
-                        _logger.LogInformation("[Ambilight] Resume detected – resuming broadcast");
+                        _logger.LogInformation("[Ambilight] Resume detected â€“ resuming broadcast");
                     }
                     else
                     {
@@ -393,7 +393,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                     {
                         if (lastFrameToSend != null && lastFrameToSend.Length > 0)
                         {
-                            await udp.SendAsync(lastFrameToSend, lastFrameToSend.Length).ConfigureAwait(false);
+                            await SendWledDnRgbFrameAsync(udp, lastFrameToSend).ConfigureAwait(false);
                         }
 
                         await Task.Delay(200, cancellationToken).ConfigureAwait(false);
@@ -563,7 +563,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
 
                 try
                 {
-                    await udp.SendAsync(frameToSend, frameToSend.Length).ConfigureAwait(false);
+                    await SendWledDnRgbFrameAsync(udp, frameToSend).ConfigureAwait(false);
                     lastFrameToSend = frameToSend;
                     if (Config.Debug && frameIndex > 0 && frameIndex % 100 == 0)
                     {
@@ -586,7 +586,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                 {
                     try
                     {
-                        await udp.SendAsync(zeroes, zeroes.Length).ConfigureAwait(false);
+                        await SendWledDnRgbFrameAsync(udp, zeroes).ConfigureAwait(false);
                     }
                     catch
                     {
@@ -605,7 +605,52 @@ public sealed class AmbilightInProcessPlayer : IDisposable
         }
     }
 
-    private static float ClampF(float v, float lo, float hi)
+    
+private const int DnRgbMaxLedsPerPacket = 489;
+private const byte WledDnRgbProtocol = 4;
+private const byte RealtimeTimeoutSeconds = 2;
+
+/// <summary>
+/// Sends WLED DNRGB realtime packets.
+/// DNRGB avoids the ~490 LED single-packet limit by splitting long frames
+/// into multiple packets with start indexes.
+/// Use WLED UDP realtime/notifier port, usually 21324.
+/// </summary>
+private static async Task SendWledDnRgbFrameAsync(
+    UdpClient udp,
+    byte[] rgbFrame,
+    int bytesPerLed = 3)
+{
+    if (rgbFrame.Length == 0 || rgbFrame.Length % bytesPerLed != 0)
+    {
+        return;
+    }
+
+    int totalLeds = rgbFrame.Length / bytesPerLed;
+
+    for (int startLed = 0; startLed < totalLeds; startLed += DnRgbMaxLedsPerPacket)
+    {
+        int ledCount = Math.Min(DnRgbMaxLedsPerPacket, totalLeds - startLed);
+        int rgbByteCount = ledCount * bytesPerLed;
+
+        byte[] packet = new byte[4 + rgbByteCount];
+
+        packet[0] = WledDnRgbProtocol;       // 4 = DNRGB
+        packet[1] = RealtimeTimeoutSeconds;  // realtime timeout in seconds
+        packet[2] = (byte)((startLed >> 8) & 0xFF);
+        packet[3] = (byte)(startLed & 0xFF);
+
+        Buffer.BlockCopy(
+            rgbFrame,
+            startLed * bytesPerLed,
+            packet,
+            4,
+            rgbByteCount);
+
+        await udp.SendAsync(packet, packet.Length).ConfigureAwait(false);
+    }
+}
+private static float ClampF(float v, float lo, float hi)
     {
         if (float.IsNaN(v)) return lo;
         if (v < lo) return lo;
@@ -685,7 +730,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                         frame[offset + 2] = b;
                     }
 
-                    await udp.SendAsync(frame, frame.Length).ConfigureAwait(false);
+                    await SendWledDnRgbFrameAsync(udp, frame).ConfigureAwait(false);
                     
                     rotation = (rotation + 1) % totalLeds;
                     await Task.Delay(30, cancellationToken).ConfigureAwait(false); // ~33fps rotation
@@ -742,9 +787,9 @@ public sealed class AmbilightInProcessPlayer : IDisposable
             // Flash 3 times (red on, black off)
             for (int flash = 0; flash < 3; flash++)
             {
-                await udp.SendAsync(redFrame, redFrame.Length).ConfigureAwait(false);
+                await SendWledDnRgbFrameAsync(udp, redFrame).ConfigureAwait(false);
                 await Task.Delay(150).ConfigureAwait(false);
-                await udp.SendAsync(blackFrame, blackFrame.Length).ConfigureAwait(false);
+                await SendWledDnRgbFrameAsync(udp, blackFrame).ConfigureAwait(false);
                 await Task.Delay(150).ConfigureAwait(false);
             }
 
@@ -757,4 +802,5 @@ public sealed class AmbilightInProcessPlayer : IDisposable
         }
     }
 }
+
 
