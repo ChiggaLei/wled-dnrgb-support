@@ -3,17 +3,17 @@
     "guid": "b3f6b4c7-0a3d-4bd4-a7e3-c8d5a0a1e3f0",
     "name": "Ambilight",
     "description": "Transform your Jellyfin viewing experience with synchronized ambient lighting via WLED",
-    "overview": "Automatic ambilight effects for movies and TV shows with real-time WLED control. This build adds WLED DNRGB realtime UDP support for larger LED counts and fixes the DNRGB packet boundary gap using a 4 LED overlap.",
+    "overview": "Automatic ambilight effects for movies and TV shows with real-time WLED control. This build adds WLED DNRGB realtime UDP support, fixes the DNRGB packet boundary gap with a 4 LED overlap, and improves playback progress handling after pause/resume.",
     "owner": "ChiggaLei / Gabriel Prat",
     "category": "General",
     "imageUrl": "https://raw.githubusercontent.com/gabrielprat/jellyfin-ambilight/refs/heads/master/docs/thumb.png",
     "versions": [
       {
-        "version": "1.8.0.2",
-        "changelog": "DNRGB overlap-4 fix. Adds a 4 LED overlap between DNRGB realtime UDP packets to prevent missing pixels at the packet boundary. Use WLED UDP realtime/notifier port 21324.",
+        "version": "1.8.0.3",
+        "changelog": "WLED DNRGB progress-fix build. Adds 4 LED DNRGB packet overlap, resume/start position sync, and safer playback progress seek detection to reduce drift after pause/unpause. Use WLED UDP realtime/notifier port 21324.",
         "targetAbi": "10.10.0.0",
-        "sourceUrl": "https://github.com/ChiggaLei/wled-dnrgb-support/releases/download/v1.8.0-dnrgb-overlap4/Ambilight-1.8.0-WLED-DNRGB-overlap4-fix.zip",
-        "checksum": "13C789AEE289833C4945D2A2C7C726AC",
+        "sourceUrl": "https://github.com/ChiggaLei/wled-dnrgb-support/releases/download/v1.8.0-dnrgb-overlap4-progressfix/Ambilight-1.8.0-WLED-DNRGB-overlap4-syncfix-progressfix.zip",
+        "checksum": "BC84EE81A49A74A8EB98DD46CFA469CB",
         "timestamp": "2026-06-09T00:00:00Z"
       }
     ]
