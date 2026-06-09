@@ -607,6 +607,7 @@ public sealed class AmbilightInProcessPlayer : IDisposable
 
     
 private const int DnRgbMaxLedsPerPacket = 489;
+    private const int DnRgbPacketOverlap = 4;
 private const byte WledDnRgbProtocol = 4;
 private const byte RealtimeTimeoutSeconds = 2;
 
@@ -616,40 +617,59 @@ private const byte RealtimeTimeoutSeconds = 2;
 /// into multiple packets with start indexes.
 /// Use WLED UDP realtime/notifier port, usually 21324.
 /// </summary>
-private static async Task SendWledDnRgbFrameAsync(
-    UdpClient udp,
-    byte[] rgbFrame,
-    int bytesPerLed = 3)
-{
-    if (rgbFrame.Length == 0 || rgbFrame.Length % bytesPerLed != 0)
+    private static async Task SendWledDnRgbFrameAsync(
+        UdpClient udp,
+        byte[] rgbFrame,
+        int bytesPerLed = 3)
     {
-        return;
+        if (rgbFrame.Length == 0 || rgbFrame.Length % bytesPerLed != 0)
+        {
+            return;
+        }
+
+        int totalLeds = rgbFrame.Length / bytesPerLed;
+
+        int startLed = 0;
+
+        while (startLed < totalLeds)
+        {
+            int ledCount = Math.Min(DnRgbMaxLedsPerPacket, totalLeds - startLed);
+            int rgbByteCount = ledCount * bytesPerLed;
+
+            byte[] packet = new byte[4 + rgbByteCount];
+
+            packet[0] = WledDnRgbProtocol;
+            packet[1] = RealtimeTimeoutSeconds;
+            packet[2] = (byte)((startLed >> 8) & 0xFF);
+            packet[3] = (byte)(startLed & 0xFF);
+
+            Buffer.BlockCopy(
+                rgbFrame,
+                startLed * bytesPerLed,
+                packet,
+                4,
+                rgbByteCount);
+
+            await udp.SendAsync(packet, packet.Length).ConfigureAwait(false);
+
+            if (startLed + ledCount >= totalLeds)
+            {
+                break;
+            }
+
+            // WLED DNRGB boundary workaround:
+            // start later packets 4 LEDs early.
+            // The duplicated LEDs receive the same frame data again.
+            int nextStartLed = startLed + ledCount - DnRgbPacketOverlap;
+
+            if (nextStartLed <= startLed)
+            {
+                nextStartLed = startLed + ledCount;
+            }
+
+            startLed = nextStartLed;
+        }
     }
-
-    int totalLeds = rgbFrame.Length / bytesPerLed;
-
-    for (int startLed = 0; startLed < totalLeds; startLed += DnRgbMaxLedsPerPacket)
-    {
-        int ledCount = Math.Min(DnRgbMaxLedsPerPacket, totalLeds - startLed);
-        int rgbByteCount = ledCount * bytesPerLed;
-
-        byte[] packet = new byte[4 + rgbByteCount];
-
-        packet[0] = WledDnRgbProtocol;       // 4 = DNRGB
-        packet[1] = RealtimeTimeoutSeconds;  // realtime timeout in seconds
-        packet[2] = (byte)((startLed >> 8) & 0xFF);
-        packet[3] = (byte)(startLed & 0xFF);
-
-        Buffer.BlockCopy(
-            rgbFrame,
-            startLed * bytesPerLed,
-            packet,
-            4,
-            rgbByteCount);
-
-        await udp.SendAsync(packet, packet.Length).ConfigureAwait(false);
-    }
-}
 private static float ClampF(float v, float lo, float hi)
     {
         if (float.IsNaN(v)) return lo;
@@ -802,5 +822,6 @@ private static float ClampF(float v, float lo, float hi)
         }
     }
 }
+
 
 
