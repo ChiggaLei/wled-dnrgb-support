@@ -408,13 +408,24 @@ public sealed class AmbilightInProcessPlayer : IDisposable
                     }
 
                     continue;
+                }                ulong baseTs = startFrame < timestampsUs.Count ? timestampsUs[startFrame] : 0;
+                var elapsed = elapsedBase + (DateTime.UtcNow - startInstant);
+                ulong elapsedUs = (ulong)(elapsed.TotalSeconds * 1_000_000.0);
+                ulong targetMovieUs = baseTs + elapsedUs;
+
+                // Drift correction:
+                // If UDP sending, smoothing, CPU load, or client behavior makes us fall
+                // behind, skip forward to the frame that matches the playback clock.
+                while (frameIndex + 1 < frames.Count &&
+                       frameIndex + 1 < timestampsUs.Count &&
+                       timestampsUs[frameIndex + 1] <= targetMovieUs)
+                {
+                    frameIndex++;
                 }
 
                 ulong frameTs = frameIndex < timestampsUs.Count ? timestampsUs[frameIndex] : 0;
-                ulong baseTs = startFrame < timestampsUs.Count ? timestampsUs[startFrame] : 0;
                 var frameTargetUs = frameTs > baseTs ? frameTs - baseTs : 0UL;
-                var elapsed = elapsedBase + (DateTime.UtcNow - startInstant);
-                ulong elapsedUs = (ulong)(elapsed.TotalSeconds * 1_000_000.0);
+
                 if (elapsedUs < frameTargetUs)
                 {
                     var sleepUs = frameTargetUs - elapsedUs;
@@ -822,6 +833,7 @@ private static float ClampF(float v, float lo, float hi)
         }
     }
 }
+
 
 
 
