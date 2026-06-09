@@ -38,6 +38,8 @@ public class AmbilightPlaybackService
     // In-process C# players, keyed by session Id. Each session can have multiple players for multiple WLED instances.
     private readonly ConcurrentDictionary<string, List<AmbilightInProcessPlayer>> _sessionPlayers = new();
     private readonly ConcurrentDictionary<string, double> _lastPositionSeconds = new();
+    private readonly ConcurrentDictionary<string, DateTime> _lastProgressUtc = new();
+    private readonly ConcurrentDictionary<string, bool> _lastPausedStates = new();
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _loadingEffectCancellations = new();
 
     public AmbilightPlaybackService(
@@ -87,7 +89,7 @@ public class AmbilightPlaybackService
                         {
                             var mappingId = m.DeviceIdentifier ?? string.Empty;
                             var normalizedMappingId = StripDeviceIdTimestamp(mappingId);
-                            return $"\"{mappingId}\" (normalized=\"{normalizedMappingId}\") → {m.Host}:{m.Port}";
+                            return $"\"{mappingId}\" (normalized=\"{normalizedMappingId}\") â†’ {m.Host}:{m.Port}";
                         })
                         .ToList();
 
@@ -134,7 +136,7 @@ public class AmbilightPlaybackService
             if (debug)
             {
                 var wledList = string.Join(", ", targets.Select(t => $"{t.Host}:{t.Port}"));
-                _logger.LogInformation("[Ambilight] Device {DeviceName} → {Count} WLED target(s): {Targets}", 
+                _logger.LogInformation("[Ambilight] Device {DeviceName} â†’ {Count} WLED target(s): {Targets}", 
                     session.DeviceName ?? session.DeviceId, targets.Count, wledList);
             }
             
@@ -177,7 +179,29 @@ public class AmbilightPlaybackService
             }
 
             var startSeconds = (info.PositionTicks ?? 0) / 10_000_000.0;
+
+
+            // Seed the last-known position on playback start.
+
+            // If PlaybackStart reports 0 but the first PlaybackProgress reports the real resume point,
+
+            // this lets progress handling detect it as a seek and resync immediately.
+
+            _lastPositionSeconds[session.Id] = startSeconds;
+            _lastProgressUtc[session.Id] = DateTime.UtcNow;
+            _lastPausedStates[session.Id] = info.IsPaused is true;
+
+
+            if (Config.Debug)
+
+            {
+
+                _logger.LogInformation("[Ambilight] PlaybackStart position for session {SessionId}: {Seconds:F3}s", session.Id, startSeconds);
+
             
+            
+            }
+
             // Try to start players for all targets (this is async, returns immediately)
             // Pass the loading effect cancellation token so the player can stop it when ready
             bool success = StartPlayersForSession(session.Id, binPath, targets, startSeconds, loadingCts);
@@ -214,36 +238,65 @@ public class AmbilightPlaybackService
         
         // Stop players
         StopPlayersForSession(session.Id);
+
+        _lastPositionSeconds.TryRemove(session.Id, out _);
+        _lastProgressUtc.TryRemove(session.Id, out _);
+        _lastPausedStates.TryRemove(session.Id, out _);
     }
 
-    public void OnPlaybackProgress(SessionInfo session, PlaybackProgressInfo info)
+        public void OnPlaybackProgress(SessionInfo session, PlaybackProgressInfo info)
     {
         if (!_sessionPlayers.TryGetValue(session.Id, out var players) || players.Count == 0)
         {
             return;
         }
 
+        var positionTicks = info.PositionTicks ?? 0;
+        var currSeconds = positionTicks / 10_000_000.0;
+        var paused = info.IsPaused is true;
+        var nowUtc = DateTime.UtcNow;
+
+        var lastSeconds = _lastPositionSeconds.GetOrAdd(session.Id, currSeconds);
+        var lastUtc = _lastProgressUtc.GetOrAdd(session.Id, nowUtc);
+        var wasPaused = _lastPausedStates.GetOrAdd(session.Id, paused);
+
+        var wallDelta = Math.Max(0.0, (nowUtc - lastUtc).TotalSeconds);
+        var playbackDelta = currSeconds - lastSeconds;
+
+        // Safer seek detection:
+        // Normal playback progress should move roughly the same amount as wall-clock time.
+        // The old logic treated any >0.5s movement as a seek, which can happen during normal progress events.
+        bool resumed = wasPaused && !paused;
+        bool jumpedBack = playbackDelta < -0.75;
+        bool jumpedForward = !paused && playbackDelta > wallDelta + 1.5;
+        bool bigMismatch = !paused && wallDelta > 0.25 && Math.Abs(playbackDelta - wallDelta) > 2.0;
+
+        bool shouldResync = resumed || jumpedBack || jumpedForward || bigMismatch;
+
         foreach (var inProc in players)
         {
-            var positionTicks = info.PositionTicks ?? 0;
-            var currSeconds = positionTicks / 10_000_000.0;
-            var paused = info.IsPaused is true;
-
             inProc.SetPaused(paused);
 
-            var last = _lastPositionSeconds.GetOrAdd(session.Id, currSeconds);
-            _lastPositionSeconds[session.Id] = currSeconds;
-
-            // Detect significant jumps (seek) – keep threshold small so manual skips resync quickly
-            if (Math.Abs(currSeconds - last) > 0.5)
+            if (shouldResync)
             {
                 if (Config.Debug)
                 {
-                    _logger.LogInformation("[Ambilight] Seek detected for session {SessionId} to {Seconds:F1}s", session.Id, currSeconds);
+                    _logger.LogInformation(
+                        "[Ambilight] Resync session {SessionId} to {Seconds:F3}s. resumed={Resumed}, playbackDelta={PlaybackDelta:F3}, wallDelta={WallDelta:F3}",
+                        session.Id,
+                        currSeconds,
+                        resumed,
+                        playbackDelta,
+                        wallDelta);
                 }
+
                 inProc.Seek(currSeconds);
             }
         }
+
+        _lastPositionSeconds[session.Id] = currSeconds;
+        _lastProgressUtc[session.Id] = nowUtc;
+        _lastPausedStates[session.Id] = paused;
     }
 
     // Device access is now controlled entirely by device mappings
@@ -361,7 +414,7 @@ public class AmbilightPlaybackService
                 if (Config.Debug)
                 {
                     int totalLeds = mapping.TopLedCount + mapping.BottomLedCount + mapping.LeftLedCount + mapping.RightLedCount;
-                    _logger.LogInformation("[Ambilight] Started player for session {SessionId} → {Host}:{Port} ({Leds} LEDs: T{Top} B{Bottom} L{Left} R{Right})", 
+                    _logger.LogInformation("[Ambilight] Started player for session {SessionId} â†’ {Host}:{Port} ({Leds} LEDs: T{Top} B{Bottom} L{Left} R{Right})", 
                         sessionId, mapping.Host, mapping.Port, totalLeds, 
                         mapping.TopLedCount, mapping.BottomLedCount, mapping.LeftLedCount, mapping.RightLedCount);
                 }
@@ -412,3 +465,6 @@ public class AmbilightPlaybackService
         }
     }
 }
+
+
+
